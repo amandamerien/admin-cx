@@ -142,6 +142,23 @@ function Comentario({
             value={texto}
             onChange={(evento) => mudar(evento.target.value)}
             onBlur={salvarAgora}
+            /* Enter publica, como em qualquer campo de comentário. Quem quiser
+               quebrar linha usa Shift+Enter; Esc fecha sem confirmar. */
+            onKeyDown={(evento) => {
+              if (evento.key === 'Escape') {
+                salvarAgora()
+                onAlternar()
+                return
+              }
+
+              if (evento.key !== 'Enter' || evento.shiftKey) return
+              evento.preventDefault()
+              /* Comentário vazio não vira nada: o balão fica aberto esperando. */
+              if (texto.trim() === '') return
+
+              salvarAgora()
+              onAlternar()
+            }}
             placeholder="Escreva o comentário..."
             aria-label="Comentário"
             ref={campoRef}
