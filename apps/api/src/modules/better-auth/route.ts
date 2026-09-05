@@ -1,7 +1,7 @@
 import { tp } from '@/utils/fastify.js'
 
 /**
- * Monta o Better Auth em /api/auth/* (login, registro, sessão, logout...).
+ * Monta o Better Auth em /api/auth/* (login, sessão, logout...).
  * `hide: true` — essas rotas NÃO entram no OpenAPI/Kubb (o front usa o client
  * do Better Auth, não os hooks gerados).
  */
@@ -11,6 +11,16 @@ export const betterAuthRoute = tp(async (scope) => {
     method: ['GET', 'POST'],
     url: '/api/auth/*',
     async handler(request, reply) {
+      /* O painel não tem cadastro público: contas nascem em POST
+         /administradores, que chama o Better Auth por dentro (sem passar por
+         aqui). Deixar /sign-up aberto deixaria qualquer um criar acesso. */
+      if (request.url.startsWith('/api/auth/sign-up')) {
+        return reply.status(403).send({
+          error: 'O cadastro é feito por um administrador do painel',
+          code: 'SIGNUP_DISABLED',
+        })
+      }
+
       try {
         const proto =
           (request.headers['x-forwarded-proto'] as string | undefined) ||
