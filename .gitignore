@@ -1,0 +1,23 @@
+# deps
+node_modules
+.pnpm-store
+
+# builds
+dist
+.output
+.turbo
+build
+*.tsbuildinfo
+
+# prisma client gerado
+packages/database/generated
+
+# env
+.env
+.env.*
+!.env.example
+
+# misc
+.DS_Store
+coverage
+*.local

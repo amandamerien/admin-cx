@@ -1,0 +1,35 @@
+{
+  "name": "@repo/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./models": "./gen/models/index.ts",
+    "./hooks": "./gen/hooks/index.ts",
+    "./hooks/*": "./gen/hooks/*/index.ts",
+    "./setup": "./src/setup.ts",
+    ".": "./gen/index.ts"
+  },
+  "scripts": {
+    "build": "kubb generate --config kubb.config.ts",
+    "dev": "kubb generate --config kubb.config.ts --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@kubb/plugin-client": "^4.39.2",
+    "axios": "^1.13.5"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.90.0"
+  },
+  "devDependencies": {
+    "@kubb/cli": "^4.39.2",
+    "@kubb/core": "^4.39.2",
+    "@kubb/plugin-oas": "^4.39.2",
+    "@kubb/plugin-react-query": "^4.39.2",
+    "@kubb/plugin-ts": "^4.39.2",
+    "@tanstack/react-query": "^5.90.0",
+    "@types/react": "^18.3.12",
+    "typescript": "^5.6.3"
+  }
+}
