@@ -1,6 +1,7 @@
 import { prisma } from '@repo/database'
 import type { BetterAuthOptions } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { env } from '@/utils/environment.js'
 
 /**
@@ -24,6 +25,37 @@ export function createAuthConfig(): BetterAuthOptions {
     session: { modelName: 'sessions' },
     account: { modelName: 'accounts' },
     verification: { modelName: 'verifications' },
+    hooks: {
+      /* Entrar no painel depende da ficha da equipe, não só da conta.
+       *
+       * Roda antes do /sign-in/email, então barra a pessoa na porta em vez de
+       * deixá-la entrar numa tela vazia. Cobre os dois casos: quem foi
+       * excluído da equipe (ficha some) e quem está com o "Acesso liberado"
+       * desligado. O cadastro interno (POST /administradores) não passa por
+       * aqui — ele chama a API do Better Auth direto. */
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== '/sign-in/email') return
+
+        const email = (ctx.body as { email?: string } | undefined)?.email
+        if (!email) return
+
+        const ficha = await prisma.administrador.findUnique({
+          where: { email: email.toLowerCase() },
+        })
+
+        if (!ficha) {
+          throw new APIError('FORBIDDEN', {
+            message: 'Esta conta não está vinculada à equipe.',
+          })
+        }
+
+        if (!ficha.ativo) {
+          throw new APIError('FORBIDDEN', {
+            message: 'O acesso desta pessoa está desativado.',
+          })
+        }
+      }),
+    },
     advanced: {
       // O Postgres gera os UUIDs (gen_random_uuid) — ver schema.prisma.
       database: { generateId: false },

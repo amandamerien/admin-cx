@@ -6,8 +6,7 @@ import {
   redirect,
 } from '@tanstack/react-router'
 import { LoginScreen } from '@/features/auth/login-screen'
-import { RegisterScreen } from '@/features/auth/register-screen'
-import { Dashboard } from '@/features/dashboard/dashboard'
+import { ClientesPage } from '@/features/clientes/ClientesPage'
 import { authClient } from '@/lib/auth-client'
 
 /** Busca a sessão no servidor (guards de rota). */
@@ -30,30 +29,20 @@ const loginRoute = createRoute({
   component: LoginScreen,
 })
 
-const registerRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/register',
-  beforeLoad: async () => {
-    if (await getSession()) throw redirect({ to: '/' })
-  },
-  component: RegisterScreen,
-})
-
-// Rota protegida: sem sessão, vai para o login.
-const dashboardRoute = createRoute({
+// Rota protegida: sem sessão, vai para o login. A área de clientes é a raiz
+// do painel — é para isso que a aplicação existe.
+const clientesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   beforeLoad: async () => {
     if (!(await getSession())) throw redirect({ to: '/login' })
   },
-  component: Dashboard,
+  component: ClientesPage,
 })
 
-const routeTree = rootRoute.addChildren([
-  loginRoute,
-  registerRoute,
-  dashboardRoute,
-])
+// Não há rota de cadastro: quem entra no painel foi cadastrado por um
+// administrador em Configurações › Administradores.
+const routeTree = rootRoute.addChildren([loginRoute, clientesRoute])
 
 export const router = createRouter({
   routeTree,

@@ -17,15 +17,16 @@ datasource db {
 // ──────────────────────────────────────────────────────────────
 
 model Users {
-  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name          String
-  email         String     @unique
-  emailVerified Boolean    @default(false)
+  email         String         @unique
+  emailVerified Boolean        @default(false)
   image         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   sessions      Sessions[]
   accounts      Accounts[]
+  administrador Administrador?
 
   @@map("users")
 }
@@ -74,4 +75,261 @@ model Verifications {
   updatedAt  DateTime @updatedAt
 
   @@map("verifications")
+}
+
+// ──────────────────────────────────────────────────────────────
+// Painel de clientes
+//
+// Os enums repetem, com os mesmos valores, as listas `as const` de
+// apps/app/src/features/clientes/dados.ts — os rótulos e as cores de cada
+// valor continuam do lado da tela; aqui fica só o domínio.
+// ──────────────────────────────────────────────────────────────
+
+enum StatusCliente {
+  ativo
+  onboarding
+  em_risco
+  inativo
+}
+
+/// Plano que o cliente assina na Clickmax.
+enum PlanoCliente {
+  growth
+  profissional
+  business
+}
+
+/// Periodicidade da cobrança do plano.
+enum CicloPlano {
+  mensal
+  anual
+}
+
+enum ColunaPipeline {
+  nao_iniciado
+  em_andamento
+  aguardando_cliente
+  em_revisao
+  bloqueado
+  concluido
+}
+
+enum EtapaFunil {
+  onboarding
+  briefing_diagnostico
+  estrategia
+  copy
+  design
+  construcao_funil
+  pipeline
+  automacoes
+  testes_revisao
+  publicacao
+}
+
+enum TipoArquivo {
+  drive
+  docs
+  sheets
+  slides
+  figma
+  notion
+  canva
+  dropbox
+  loom
+  outro
+}
+
+enum Papel {
+  administrador
+  editor
+  visualizador
+}
+
+enum AvatarId {
+  estrela
+  espinho
+  losango
+  capsula
+  gota
+  coracao
+  bolha
+}
+
+enum GrupoChecklist {
+  base
+  produtos
+  publico
+  empresa
+  paginas
+  campanhas
+  ferramentas
+  objetivo
+}
+
+enum TipoAnotacao {
+  postit
+  emoji
+  comentario
+}
+
+enum CorAnotacao {
+  amarelo
+  rosa
+  azul
+  verde
+  roxo
+  laranja
+}
+
+/// Pessoa do time Clickmax. `userId` liga a ficha à conta do Better Auth —
+/// fica nulo enquanto a pessoa está na equipe mas ainda sem acesso, que é o
+/// mesmo que o `email: null` fazia na tela.
+model Administrador {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome      String
+  cargo     String
+  email     String?  @unique
+  papel     Papel    @default(visualizador)
+  ativo     Boolean  @default(true)
+  avatar    AvatarId @default(estrela)
+  userId    String?  @unique @db.Uuid
+  user      Users?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notas     NotaCliente[]
+  anotacoes Anotacao[]
+
+  @@map("administradores")
+}
+
+/// Cliente em construção de funil com o time.
+model Cliente {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome       String
+  email      String
+  status     StatusCliente @default(onboarding)
+  /// Plano e ciclo ficam opcionais: os clientes cadastrados antes desta
+  /// coluna existirem não têm plano registrado, e chutar um deles seria
+  /// inventar dado comercial.
+  plano      PlanoCliente?
+  cicloPlano CicloPlano?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  funis     Funil[]
+  arquivos  ArquivoCliente[]
+  acessos   AcessoCliente[]
+  notas     NotaCliente[]
+  checklist ItemChecklist[]
+
+  @@index([status])
+  @@map("clientes")
+}
+
+/// Funil de um cliente: em que etapa está e em que coluna do pipeline aparece.
+model Funil {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId   String         @db.Uuid
+  cliente     Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  nome        String
+  etapa       EtapaFunil     @default(onboarding)
+  status      ColunaPipeline @default(nao_iniciado)
+  /// Quem do time responde pelo funil, pelo nome — a ficha da pessoa pode sair
+  /// da equipe sem levar o histórico do funil junto.
+  responsavel String
+  /// Data de entrega prevista; nulo enquanto não há data combinada.
+  dataEntrega DateTime?      @db.Date
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([clienteId])
+  @@index([status])
+  @@map("funis")
+}
+
+/// Link de material do cliente (Drive, Figma, Notion...).
+model ArquivoCliente {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId String      @db.Uuid
+  cliente   Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tipo      TipoArquivo
+  /// Como o arquivo é chamado na conversa: o rótulo do tipo, ou o que a pessoa
+  /// digitou quando o tipo é "outro".
+  nome      String
+  url       String
+  createdAt DateTime    @default(now())
+
+  @@index([clienteId])
+  @@map("arquivos_cliente")
+}
+
+/// Acesso de plataforma que o cliente entregou ao time.
+model AcessoCliente {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId  String   @db.Uuid
+  cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  plataforma String
+  email      String
+  senha      String
+  url        String?
+  createdAt  DateTime @default(now())
+
+  @@index([clienteId])
+  @@map("acessos_cliente")
+}
+
+/// Recado preso à ficha do cliente.
+model NotaCliente {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId  String         @db.Uuid
+  cliente    Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  autorId    String?        @db.Uuid
+  autorFicha Administrador? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+  /// O nome vai junto para a nota não ficar sem assinatura se a pessoa sair da
+  /// equipe — mesma razão do campo `autor` na tela.
+  autor      String
+  texto      String
+  criadaEm   DateTime       @default(now())
+
+  @@index([clienteId])
+  @@map("notas_cliente")
+}
+
+/// Item do checklist de onboarding, copiado do modelo para cada cliente.
+model ItemChecklist {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId String         @db.Uuid
+  cliente   Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  grupo     GrupoChecklist
+  titulo    String
+  descricao String?
+  recebido  Boolean        @default(false)
+  /// Onde o material foi parar: link do Drive, do Figma, do que for.
+  link      String?
+  /// Posição no modelo, para o checklist sair sempre na ordem do documento.
+  ordem     Int
+  updatedAt DateTime       @updatedAt
+
+  @@index([clienteId])
+  @@map("itens_checklist")
+}
+
+/// Post-it, emoji ou comentário do mural do time. `x` e `y` são porcentagem do
+/// quadro, para a posição acompanhar o redimensionamento.
+model Anotacao {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo       TipoAnotacao
+  x          Float
+  y          Float
+  texto      String
+  cor        CorAnotacao    @default(amarelo)
+  autorId    String?        @db.Uuid
+  autorFicha Administrador? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+  autor      String
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@map("anotacoes")
 }

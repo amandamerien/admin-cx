@@ -1,0 +1,15 @@
+export type { DeleteAdministradoresIdMutationKey } from "./useDeleteAdministradoresId.ts";
+export type { PatchAdministradoresIdMutationKey } from "./usePatchAdministradoresId.ts";
+export type { PostAdministradoresMutationKey } from "./usePostAdministradores.ts";
+export { deleteAdministradoresId } from "./useDeleteAdministradoresId.ts";
+export { deleteAdministradoresIdMutationKey } from "./useDeleteAdministradoresId.ts";
+export { deleteAdministradoresIdMutationOptions } from "./useDeleteAdministradoresId.ts";
+export { useDeleteAdministradoresId } from "./useDeleteAdministradoresId.ts";
+export { patchAdministradoresId } from "./usePatchAdministradoresId.ts";
+export { patchAdministradoresIdMutationKey } from "./usePatchAdministradoresId.ts";
+export { patchAdministradoresIdMutationOptions } from "./usePatchAdministradoresId.ts";
+export { usePatchAdministradoresId } from "./usePatchAdministradoresId.ts";
+export { postAdministradores } from "./usePostAdministradores.ts";
+export { postAdministradoresMutationKey } from "./usePostAdministradores.ts";
+export { postAdministradoresMutationOptions } from "./usePostAdministradores.ts";
+export { usePostAdministradores } from "./usePostAdministradores.ts";

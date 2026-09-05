@@ -1,0 +1,10 @@
+export type { GetPainelQueryKey } from "./useGetPainel.ts";
+export type { GetPainelSuspenseQueryKey } from "./useGetPainelSuspense.ts";
+export { getPainel } from "./useGetPainel.ts";
+export { getPainelQueryKey } from "./useGetPainel.ts";
+export { getPainelQueryOptions } from "./useGetPainel.ts";
+export { useGetPainel } from "./useGetPainel.ts";
+export { getPainelSuspense } from "./useGetPainelSuspense.ts";
+export { getPainelSuspenseQueryKey } from "./useGetPainelSuspense.ts";
+export { getPainelSuspenseQueryOptions } from "./useGetPainelSuspense.ts";
+export { useGetPainelSuspense } from "./useGetPainelSuspense.ts";
