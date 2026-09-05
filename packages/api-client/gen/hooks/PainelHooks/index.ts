@@ -1,5 +1,15 @@
+export type { GetAtividadesQueryKey } from "./useGetAtividades.ts";
+export type { GetAtividadesSuspenseQueryKey } from "./useGetAtividadesSuspense.ts";
 export type { GetPainelQueryKey } from "./useGetPainel.ts";
 export type { GetPainelSuspenseQueryKey } from "./useGetPainelSuspense.ts";
+export { getAtividades } from "./useGetAtividades.ts";
+export { getAtividadesQueryKey } from "./useGetAtividades.ts";
+export { getAtividadesQueryOptions } from "./useGetAtividades.ts";
+export { useGetAtividades } from "./useGetAtividades.ts";
+export { getAtividadesSuspense } from "./useGetAtividadesSuspense.ts";
+export { getAtividadesSuspenseQueryKey } from "./useGetAtividadesSuspense.ts";
+export { getAtividadesSuspenseQueryOptions } from "./useGetAtividadesSuspense.ts";
+export { useGetAtividadesSuspense } from "./useGetAtividadesSuspense.ts";
 export { getPainel } from "./useGetPainel.ts";
 export { getPainelQueryKey } from "./useGetPainel.ts";
 export { getPainelQueryOptions } from "./useGetPainel.ts";

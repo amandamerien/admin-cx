@@ -2,6 +2,8 @@ import { cn } from '@repo/ui'
 import { Check, Copy, Eye, EyeOff, Plus, Users } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { CLASSES_STATUS, type Cliente, STATUS_LABEL } from './dados'
+import { type ContagemPorFrente, SelosDoCliente } from './frentes-do-cliente'
+import { AnelProgresso } from './graficos'
 import { MenuAcoes } from './menu-acoes'
 
 /* Copia o e-mail e confirma trocando o ícone por alguns segundos. */
@@ -91,11 +93,19 @@ function EmailDoCartao({ email }: { email: string }) {
 
 function CartaoCliente({
   cliente,
+  contagem,
+  concluidas,
+  podeEditar,
   onAbrir,
   onEditar,
   onExcluir,
 }: {
   cliente: Cliente
+  contagem: ContagemPorFrente
+  /** Entregas já concluídas, para o anel de progresso. */
+  concluidas: number
+  /** Sem isto o cartão é só leitura: abre a ficha, mas não oferece ações. */
+  podeEditar: boolean
   onAbrir: () => void
   onEditar: () => void
   onExcluir: () => void
@@ -103,13 +113,14 @@ function CartaoCliente({
   return (
     <article className="relative flex flex-col gap-3 rounded-xl border border-white/8 bg-white/2 p-4 transition-colors focus-within:border-white/25 hover:border-white/16">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="min-w-0 font-inter font-medium text-lg text-white leading-tight">
+        <h3 className="min-w-0 font-inter font-medium text-sm text-white leading-tight">
           {/* O ::after cobre o cartão inteiro: o clique em qualquer ponto
               cai neste botão, que continua acessível pelo teclado. */}
           <button
             type="button"
             onClick={onAbrir}
-            className="text-left outline-none after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:underline"
+            title={cliente.nome}
+            className="block w-full truncate text-left outline-none after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:underline"
           >
             {cliente.nome}
           </button>
@@ -125,29 +136,58 @@ function CartaoCliente({
             {STATUS_LABEL[cliente.status]}
           </span>
 
-          <div className="relative z-10">
-            <MenuAcoes
-              rotulo={cliente.nome}
-              onEditar={onEditar}
-              onExcluir={onExcluir}
-            />
-          </div>
+          {podeEditar && (
+            <div className="relative z-10">
+              <MenuAcoes
+                rotulo={cliente.nome}
+                onEditar={onEditar}
+                onExcluir={onExcluir}
+              />
+            </div>
+          )}
         </div>
       </div>
 
       <EmailDoCartao email={cliente.email} />
+
+      {/* O que já existe na ficha, sem precisar abrir. */}
+      {/* O que o cliente tem à esquerda; o progresso na ponta direita. */}
+      <div className="relative z-10 flex items-center justify-between gap-2">
+        <SelosDoCliente
+          contagem={contagem}
+          className="flex flex-wrap items-center gap-1"
+        />
+
+        {/* Sem rótulo aqui: no cartão o espaço é curto e o anel já diz o que
+            é. O nome do campo fica no hover. */}
+        {cliente.funisContratados > 0 && (
+          <span title="Funis contratados" className="ml-auto shrink-0">
+            <AnelProgresso
+              compacto
+              feito={concluidas}
+              total={cliente.funisContratados}
+              className="text-[#ABABAB]"
+            />
+          </span>
+        )}
+      </div>
     </article>
   )
 }
 
 export function SecaoClientes({
   clientes,
+  contagens,
+  podeEditar,
   onAdicionar,
   onAbrir,
   onEditar,
   onExcluir,
 }: {
   clientes: Cliente[]
+  /** Quantos itens cada cliente tem em cada frente, pelo id do cliente. */
+  contagens: Record<string, ContagemPorFrente & { concluidas: number }>
+  podeEditar: boolean
   onAdicionar: () => void
   onAbrir: (cliente: Cliente) => void
   onEditar: (cliente: Cliente) => void
@@ -166,14 +206,16 @@ export function SecaoClientes({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onAdicionar}
-          className="mt-1 flex h-10 items-center gap-2 rounded-full bg-white px-5 font-inter font-medium text-[#131316] text-sm transition-colors hover:bg-white/90"
-        >
-          <Plus className="size-4" />
-          Adicionar cliente
-        </button>
+        {podeEditar && (
+          <button
+            type="button"
+            onClick={onAdicionar}
+            className="mt-1 flex h-10 items-center gap-2 rounded-full bg-white px-5 font-inter font-medium text-[#131316] text-sm transition-colors hover:bg-white/90"
+          >
+            <Plus className="size-4" />
+            Adicionar cliente
+          </button>
+        )}
       </div>
     )
   }
@@ -184,6 +226,16 @@ export function SecaoClientes({
         <CartaoCliente
           key={cliente.id}
           cliente={cliente}
+          concluidas={contagens[cliente.id]?.concluidas ?? 0}
+          podeEditar={podeEditar}
+          contagem={
+            contagens[cliente.id] ?? {
+              entregas: 0,
+              anotacoes: 0,
+              arquivos: 0,
+              acessos: 0,
+            }
+          }
           onAbrir={() => onAbrir(cliente)}
           onEditar={() => onEditar(cliente)}
           onExcluir={() => onExcluir(cliente)}

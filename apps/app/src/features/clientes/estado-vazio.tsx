@@ -227,6 +227,112 @@ function AnotacaoVazia({ id }: { id: string }) {
   )
 }
 
+/* Três documentos empilhados em leque, para listas do que ainda não foi
+ * emitido. Cada um é a mesma peça — moldura, barra de título e os três pontos
+ * — girada e deslocada; o da frente é o maior e o mais claro, o que dá a
+ * sensação de pilha. */
+function Janela({
+  x,
+  y,
+  largura,
+  altura,
+  giro,
+  fundo,
+  borda,
+}: {
+  x: number
+  y: number
+  largura: number
+  altura: number
+  giro: number
+  fundo: string
+  borda: string
+}) {
+  const meio = { x: x + largura / 2, y: y + altura / 2 }
+
+  return (
+    <g transform={`rotate(${giro} ${meio.x} ${meio.y})`}>
+      <rect
+        x={x}
+        y={y}
+        width={largura}
+        height={altura}
+        rx="5"
+        fill={fundo}
+        stroke={borda}
+        strokeWidth="1.5"
+      />
+      <line
+        x1={x}
+        y1={y + 11}
+        x2={x + largura}
+        y2={y + 11}
+        stroke={borda}
+        strokeWidth="1.5"
+      />
+      {[0, 1, 2].map((indice) => (
+        <circle
+          key={indice}
+          cx={x + 8 + indice * 7}
+          cy={y + 5.5}
+          r="1.8"
+          fill={borda}
+        />
+      ))}
+    </g>
+  )
+}
+
+function DocumentosVazios({ id }: { id: string }) {
+  const halo = `halo-${id}`
+
+  return (
+    <svg
+      viewBox="0 0 120 120"
+      aria-hidden
+      className="size-28 shrink-0"
+      role="presentation"
+    >
+      <defs>
+        <radialGradient id={halo}>
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      <circle cx="60" cy="62" r="46" fill={`url(#${halo})`} />
+
+      <Janela
+        x={14}
+        y={46}
+        largura={44}
+        altura={40}
+        giro={-14}
+        fundo="#1C1C20"
+        borda="#2B2B31"
+      />
+      <Janela
+        x={30}
+        y={30}
+        largura={50}
+        altura={44}
+        giro={-5}
+        fundo="#202024"
+        borda="#313138"
+      />
+      <Janela
+        x={46}
+        y={44}
+        largura={56}
+        altura={46}
+        giro={3}
+        fundo="#26262B"
+        borda="#3A3A42"
+      />
+    </svg>
+  )
+}
+
 /* Bloco de "ainda não tem nada aqui": ilustração, o que falta e o que fazer. */
 export function EstadoVazio({
   id,
@@ -237,7 +343,7 @@ export function EstadoVazio({
 }: {
   /** Sufixo dos ids do SVG — único por bloco na mesma tela. */
   id: string
-  desenho?: 'caixa' | 'cadeado' | 'anotacao'
+  desenho?: 'caixa' | 'cadeado' | 'anotacao' | 'documentos'
   titulo: string
   descricao?: string
   className?: string
@@ -251,6 +357,7 @@ export function EstadoVazio({
     >
       {desenho === 'cadeado' && <CadeadoVazio id={id} />}
       {desenho === 'anotacao' && <AnotacaoVazia id={id} />}
+      {desenho === 'documentos' && <DocumentosVazios id={id} />}
       {desenho === 'caixa' && <CaixaVazia id={id} />}
 
       <p className="font-inter font-medium text-[#ABABAB] text-sm">{titulo}</p>

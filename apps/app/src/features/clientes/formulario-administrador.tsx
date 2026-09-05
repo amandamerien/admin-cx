@@ -14,6 +14,7 @@ import {
   PAPEIS,
   PAPEL_DESCRICAO,
   PAPEL_LABEL,
+  type Papel,
 } from './dados'
 
 const schema = z.object({
@@ -27,17 +28,21 @@ const schema = z.object({
      Cadastrar alguém na equipe é criar o acesso dela. */
   senha: z
     .string()
-    .min(8, 'A senha precisa de ao menos 8 caracteres')
+    .min(6, 'A senha precisa de ao menos 6 caracteres')
     .optional()
     .or(z.literal('')),
 })
 
 export type NovoAdministrador = z.infer<typeof schema>
 
-/* Senha padrão de entrada da equipe: o administrador preenche com um clique e
- * avisa a pessoa. É a mesma para todo mundo, então serve como senha de
- * primeiro acesso — quem quiser algo só seu digita no lugar. */
-const SENHA_PADRAO = 'clickmax@2026'
+/* Senha padrão de entrada, por papel: o administrador preenche com um clique e
+ * avisa a pessoa. Serve como senha de primeiro acesso — quem quiser algo só
+ * seu digita no lugar. */
+const SENHA_PADRAO: Record<Papel, string> = {
+  administrador: 'adm@123',
+  editor: 'clickmax@2026',
+  visualizador: 'clickmax@2026',
+}
 
 const VALORES_PADRAO: NovoAdministrador = {
   nome: '',
@@ -119,7 +124,7 @@ export function FormularioAdministrador({
         ? schema.extend({
             senha: z
               .string()
-              .min(8, 'A senha precisa de ao menos 8 caracteres'),
+              .min(6, 'A senha precisa de ao menos 6 caracteres'),
           })
         : schema,
     ),
@@ -145,6 +150,7 @@ export function FormularioAdministrador({
   }, [aberto, administrador, reset])
 
   const escolhido = watch('avatar')
+  const papelEscolhido = watch('papel')
 
   function aoEnviar(dados: NovoAdministrador) {
     onSalvar(dados)
@@ -231,7 +237,9 @@ export function FormularioAdministrador({
                   <button
                     type="button"
                     onClick={() =>
-                      setValue('senha', SENHA_PADRAO, { shouldValidate: true })
+                      setValue('senha', SENHA_PADRAO[papelEscolhido], {
+                        shouldValidate: true,
+                      })
                     }
                     className="h-10 shrink-0 whitespace-nowrap rounded-lg border border-white/8 bg-white/2 px-3 font-inter font-medium text-[#F4F5F5] text-xs transition-colors hover:bg-white/6"
                   >
@@ -275,10 +283,6 @@ export function FormularioAdministrador({
                   </label>
                 ))}
               </div>
-
-              <p className="pt-2 font-inter text-[#6F6F76] text-xs">
-                É o bichinho que identifica a pessoa nos comentários do mural.
-              </p>
             </fieldset>
 
             <fieldset className="flex flex-col gap-2">

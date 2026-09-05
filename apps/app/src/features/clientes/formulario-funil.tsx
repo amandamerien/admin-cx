@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { Avatar } from './avatares'
 import {
   type Administrador,
   type Cliente,
@@ -27,7 +28,7 @@ const schema = z
     nomePersonalizado: z.string().trim(),
     etapa: z.enum(ETAPAS_FUNIL),
     status: z.enum(STATUS_FUNIL),
-    responsavel: z.string().trim().min(2, 'Informe o responsável'),
+    responsaveis: z.array(z.string()).min(1, 'Escolha ao menos um responsável'),
     /* Campo vazio vira `null`: a data pode não estar combinada ainda. */
     dataEntrega: z.string().transform((valor) => (valor === '' ? null : valor)),
   })
@@ -122,6 +123,7 @@ export function FormularioFunil({
     register,
     handleSubmit,
     reset,
+    setValue,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<NovoFunilInput, unknown, NovoFunil>({
@@ -132,12 +134,13 @@ export function FormularioFunil({
       nomePersonalizado: '',
       etapa: 'onboarding',
       status: 'nao_iniciado',
-      responsavel: administradores[0]?.nome ?? '',
+      responsaveis: administradores[0] ? [administradores[0].nome] : [],
       dataEntrega: '',
     },
   })
 
   const tipoEscolhido = watch('tipo')
+  const responsaveis = watch('responsaveis')
 
   useEffect(() => {
     if (!aberto) return
@@ -149,7 +152,7 @@ export function FormularioFunil({
             ...valoresDoNome(funil.nome),
             etapa: funil.etapa,
             status: funil.status,
-            responsavel: funil.responsavel,
+            responsaveis: funil.responsaveis,
             dataEntrega: funil.dataEntrega ?? '',
           }
         : {
@@ -158,7 +161,7 @@ export function FormularioFunil({
             nomePersonalizado: '',
             etapa: 'onboarding',
             status: 'nao_iniciado',
-            responsavel: administradores[0]?.nome ?? '',
+            responsaveis: administradores[0] ? [administradores[0].nome] : [],
             dataEntrega: '',
           },
     )
@@ -296,21 +299,52 @@ export function FormularioFunil({
             </div>
 
             <Campo
-              id="funil-responsavel"
-              rotulo="Responsável"
-              erro={errors.responsavel?.message}
+              id="funil-responsaveis"
+              rotulo="Responsáveis"
+              erro={errors.responsaveis?.message}
             >
-              <select
-                id="funil-responsavel"
-                className={classeCampo}
-                {...register('responsavel')}
+              {/* Caixas em vez de select: uma entrega pode ser tocada a mais
+                  de uma mão, e marcar é mais direto do que segurar Ctrl. */}
+              <div
+                id="funil-responsaveis"
+                className="flex flex-col gap-1 rounded-lg border border-white/8 bg-white/2 p-2"
               >
-                {administradores.map((administrador) => (
-                  <option key={administrador.id} value={administrador.nome}>
-                    {administrador.nome}
-                  </option>
-                ))}
-              </select>
+                {administradores.map((administrador) => {
+                  const marcado = responsaveis.includes(administrador.nome)
+
+                  return (
+                    <label
+                      key={administrador.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-white/4"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={marcado}
+                        onChange={(evento) =>
+                          setValue(
+                            'responsaveis',
+                            evento.target.checked
+                              ? [...responsaveis, administrador.nome]
+                              : responsaveis.filter(
+                                  (nome) => nome !== administrador.nome,
+                                ),
+                            { shouldValidate: true },
+                          )
+                        }
+                        className="size-3.5 shrink-0 accent-sky-400"
+                      />
+                      <Avatar
+                        avatar={administrador.avatar}
+                        rotulo={administrador.nome}
+                        className="size-4 rounded-[4px]"
+                      />
+                      <span className="font-inter text-[#F4F5F5] text-sm">
+                        {administrador.nome}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
             </Campo>
 
             <Campo

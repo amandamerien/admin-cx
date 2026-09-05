@@ -27,6 +27,7 @@ model Users {
   sessions      Sessions[]
   accounts      Accounts[]
   administrador Administrador?
+  acessos       AcessoEquipe[]
 
   @@map("users")
 }
@@ -137,6 +138,7 @@ enum TipoArquivo {
   canva
   dropbox
   loom
+  claude
   outro
 }
 
@@ -182,6 +184,90 @@ enum CorAnotacao {
   laranja
 }
 
+/// O que aconteceu no painel: uma linha por ação que vale contar aos outros.
+///
+/// O nome do autor fica copiado aqui, como no log de acessos: se a pessoa sair
+/// da equipe, o histórico continua legível.
+model Atividade {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  autorId   String?        @db.Uuid
+  autor     Administrador? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+  autorNome String
+  /// O que foi feito: `cliente_criado`, `entrega_criada`, e por aí.
+  acao      String
+  /// Sobre o quê: o nome do cliente, da entrega, do invoice.
+  alvo      String
+  /// Complemento quando a ação pede — o status novo, por exemplo.
+  detalhe   String?
+  criadoEm  DateTime       @default(now())
+
+  @@index([criadoEm])
+  @@map("atividades")
+}
+
+/// Invoice emitido pelo painel.
+///
+/// Não tem vínculo com `Cliente` de propósito: serve para emitir em nome de
+/// quem for, inclusive de quem não está na carteira. O que identifica o
+/// destinatário é o que foi digitado na hora.
+model Invoice {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  numero    String
+  /// Data que sai impressa no documento.
+  data      DateTime @db.Date
+  nome      String
+  cpf       String
+  email     String
+  telefone  String
+  endereco  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  itens ItemInvoice[]
+
+  @@index([createdAt])
+  @@map("invoices")
+}
+
+/// Linha da descrição do invoice.
+model ItemInvoice {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId  String  @db.Uuid
+  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  fornecedor String
+  /// Texto livre: cabe "2" e cabe "2 meses".
+  quantidade String
+  /// Valor total da linha, em reais.
+  valor      Decimal @db.Decimal(12, 2)
+  /// Posição na lista, para o documento sair sempre na mesma ordem.
+  ordem      Int
+
+  @@index([invoiceId])
+  @@map("itens_invoice")
+}
+
+/// Uma entrada no painel: uma linha por login, gravada no momento em que a
+/// pessoa entra.
+///
+/// Separado das sessões do Better Auth de propósito — aquela tabela guarda só
+/// as sessões vivas, então some quando a pessoa sai ou a sessão expira, e o
+/// histórico de acessos se perderia. Nome e e-mail ficam copiados aqui para o
+/// registro continuar legível se a conta for excluída depois.
+model AcessoEquipe {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?  @db.Uuid
+  user      Users?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  nome      String
+  email     String
+  ip        String?
+  userAgent String?
+  criadoEm  DateTime @default(now())
+
+  @@index([criadoEm])
+  @@index([userId])
+  @@map("acessos_equipe")
+}
+
 /// Pessoa do time Clickmax. `userId` liga a ficha à conta do Better Auth —
 /// fica nulo enquanto a pessoa está na equipe mas ainda sem acesso, que é o
 /// mesmo que o `email: null` fazia na tela.
@@ -198,25 +284,29 @@ model Administrador {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  notas     NotaCliente[]
-  anotacoes Anotacao[]
+  notas      NotaCliente[]
+  anotacoes  Anotacao[]
+  atividades Atividade[]
 
   @@map("administradores")
 }
 
 /// Cliente em construção de funil com o time.
 model Cliente {
-  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nome       String
-  email      String
-  status     StatusCliente @default(onboarding)
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome             String
+  email            String
+  status           StatusCliente @default(onboarding)
   /// Plano e ciclo ficam opcionais: os clientes cadastrados antes desta
   /// coluna existirem não têm plano registrado, e chutar um deles seria
   /// inventar dado comercial.
-  plano      PlanoCliente?
-  cicloPlano CicloPlano?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  plano            PlanoCliente?
+  cicloPlano       CicloPlano?
+  /// Quantas entregas o cliente contratou. Serve de meta: a ficha compara o
+  /// que foi concluído com este número.
+  funisContratados Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   funis     Funil[]
   arquivos  ArquivoCliente[]
@@ -230,19 +320,20 @@ model Cliente {
 
 /// Funil de um cliente: em que etapa está e em que coluna do pipeline aparece.
 model Funil {
-  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  clienteId   String         @db.Uuid
-  cliente     Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  nome        String
-  etapa       EtapaFunil     @default(onboarding)
-  status      ColunaPipeline @default(nao_iniciado)
-  /// Quem do time responde pelo funil, pelo nome — a ficha da pessoa pode sair
-  /// da equipe sem levar o histórico do funil junto.
-  responsavel String
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId    String         @db.Uuid
+  cliente      Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  nome         String
+  etapa        EtapaFunil     @default(onboarding)
+  status       ColunaPipeline @default(nao_iniciado)
+  /// Quem do time responde pela entrega, pelos nomes — a ficha da pessoa pode
+  /// sair da equipe sem levar o histórico junto. Lista porque uma entrega pode
+  /// ser tocada a mais de uma mão.
+  responsaveis String[]
   /// Data de entrega prevista; nulo enquanto não há data combinada.
-  dataEntrega DateTime?      @db.Date
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  dataEntrega  DateTime?      @db.Date
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@index([clienteId])
   @@index([status])

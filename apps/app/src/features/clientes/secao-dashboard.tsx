@@ -6,7 +6,7 @@ import {
   type LucideIcon,
   Users,
 } from 'lucide-react'
-import { NomeComAvatar } from './avatares'
+import { ResponsaveisComAvatar } from './avatares'
 import {
   type Administrador,
   avatarDoResponsavel,
@@ -16,7 +16,9 @@ import {
   entreguesPorMes,
   type Funil,
   formatarData,
+  funisDoMes,
   funisPorResponsavel,
+  responsaveisDoFunil,
   STATUS_FUNIL_LABEL,
 } from './dados'
 import { Bloco, GraficoBarras, GraficoColunas } from './graficos'
@@ -45,7 +47,7 @@ function Cartao({
       </div>
 
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300 ring-1 ring-sky-400/20 ring-inset">
-        <Icone className="size-4.5" />
+        <Icone className="size-4" />
       </span>
     </div>
   )
@@ -109,9 +111,9 @@ function ListagemFunis({
                 {funil.nome}
               </td>
               <td className="px-4 py-2.5 font-inter text-[#ABABAB] text-sm">
-                <NomeComAvatar
+                <ResponsaveisComAvatar
                   administradores={administradores}
-                  nome={funil.responsavel}
+                  nomes={responsaveisDoFunil(funil)}
                 />
               </td>
               <td className="px-4 py-2.5 font-inter text-[#ABABAB] text-sm">
@@ -144,13 +146,20 @@ export function SecaoDashboard({
   clientes,
   funis,
   administradores,
+  mes,
 }: {
   clientes: Cliente[]
   funis: Funil[]
   administradores: Administrador[]
+  /** AAAA-MM do filtro; vazio = todos os meses. */
+  mes: string
 }) {
-  const entregues = funis.filter((funil) => funil.status === 'concluido').length
-  const emProgresso = funis.filter(
+  /* O filtro é pela data de entrega, então vale para tudo que fala de
+     entregas. Clientes fica de fora: uma conta não pertence a um mês. */
+  const doMes = funisDoMes(funis, mes)
+
+  const entregues = doMes.filter((funil) => funil.status === 'concluido').length
+  const emProgresso = doMes.filter(
     (funil) => funil.status === 'em_andamento',
   ).length
 
@@ -165,7 +174,7 @@ export function SecaoDashboard({
         />
         <Cartao
           titulo="Entregas"
-          valor={funis.length}
+          valor={doMes.length}
           apoio="Cadastrados no total"
           icone={GitBranch}
         />
@@ -179,8 +188,8 @@ export function SecaoDashboard({
           titulo="Entregues"
           valor={entregues}
           apoio={
-            funis.length > 0
-              ? `${Math.round((entregues / funis.length) * 100)}% do total`
+            doMes.length > 0
+              ? `${Math.round((entregues / doMes.length) * 100)}% do total`
               : 'Nenhuma entrega ainda'
           }
           icone={CircleCheckBig}
@@ -192,12 +201,12 @@ export function SecaoDashboard({
           titulo="Entregas concluídas por mês"
           apoio="Últimos 6 meses, pela data de entrega"
         >
-          <GraficoColunas dados={entreguesPorMes(funis)} />
+          <GraficoColunas dados={entreguesPorMes(doMes)} />
         </Bloco>
 
         <Bloco titulo="Entregas por responsável" apoio="Carga atual de cada um">
           <GraficoBarras
-            dados={funisPorResponsavel(funis).map((item) => ({
+            dados={funisPorResponsavel(doMes).map((item) => ({
               rotulo: item.responsavel,
               total: item.total,
               avatar: avatarDoResponsavel(administradores, item.responsavel),
@@ -210,7 +219,7 @@ export function SecaoDashboard({
       <Bloco titulo="Entregas" apoio="Todas as entregas cadastradas">
         <ListagemFunis
           clientes={clientes}
-          funis={funis}
+          funis={doMes}
           administradores={administradores}
         />
       </Bloco>

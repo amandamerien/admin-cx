@@ -149,6 +149,11 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "funisContratados": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -157,7 +162,8 @@
                           "email",
                           "status",
                           "plano",
-                          "cicloPlano"
+                          "cicloPlano",
+                          "funisContratados"
                         ],
                         "additionalProperties": false
                       }
@@ -202,8 +208,11 @@
                               "concluido"
                             ]
                           },
-                          "responsavel": {
-                            "type": "string"
+                          "responsaveis": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
                           },
                           "dataEntrega": {
                             "anyOf": [
@@ -222,7 +231,7 @@
                           "nome",
                           "etapa",
                           "status",
-                          "responsavel",
+                          "responsaveis",
                           "dataEntrega"
                         ],
                         "additionalProperties": false
@@ -251,6 +260,7 @@
                               "canva",
                               "dropbox",
                               "loom",
+                              "claude",
                               "outro"
                             ]
                           },
@@ -636,6 +646,11 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "funisContratados": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   }
                 },
                 "required": [
@@ -643,7 +658,8 @@
                   "email",
                   "status",
                   "plano",
-                  "cicloPlano"
+                  "cicloPlano",
+                  "funisContratados"
                 ]
               }
             }
@@ -703,6 +719,11 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "funisContratados": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
@@ -711,7 +732,8 @@
                     "email",
                     "status",
                     "plano",
-                    "cicloPlano"
+                    "cicloPlano",
+                    "funisContratados"
                   ],
                   "additionalProperties": false
                 }
@@ -815,6 +837,11 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "funisContratados": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   }
                 }
               }
@@ -885,6 +912,11 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "funisContratados": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
@@ -893,7 +925,8 @@
                     "email",
                     "status",
                     "plano",
-                    "cicloPlano"
+                    "cicloPlano",
+                    "funisContratados"
                   ],
                   "additionalProperties": false
                 }
@@ -1099,8 +1132,11 @@
                       "concluido"
                     ]
                   },
-                  "responsavel": {
-                    "type": "string"
+                  "responsaveis": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   },
                   "dataEntrega": {
                     "anyOf": [
@@ -1118,7 +1154,7 @@
                   "nome",
                   "etapa",
                   "status",
-                  "responsavel",
+                  "responsaveis",
                   "dataEntrega"
                 ]
               }
@@ -1168,8 +1204,11 @@
                         "concluido"
                       ]
                     },
-                    "responsavel": {
-                      "type": "string"
+                    "responsaveis": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     },
                     "dataEntrega": {
                       "anyOf": [
@@ -1188,7 +1227,7 @@
                     "nome",
                     "etapa",
                     "status",
-                    "responsavel",
+                    "responsaveis",
                     "dataEntrega"
                   ],
                   "additionalProperties": false
@@ -1282,8 +1321,11 @@
                       "concluido"
                     ]
                   },
-                  "responsavel": {
-                    "type": "string"
+                  "responsaveis": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   },
                   "dataEntrega": {
                     "anyOf": [
@@ -1353,8 +1395,11 @@
                         "concluido"
                       ]
                     },
-                    "responsavel": {
-                      "type": "string"
+                    "responsaveis": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     },
                     "dataEntrega": {
                       "anyOf": [
@@ -1373,7 +1418,7 @@
                     "nome",
                     "etapa",
                     "status",
-                    "responsavel",
+                    "responsaveis",
                     "dataEntrega"
                   ],
                   "additionalProperties": false
@@ -1563,6 +1608,7 @@
                       "canva",
                       "dropbox",
                       "loom",
+                      "claude",
                       "outro"
                     ]
                   },
@@ -1609,6 +1655,7 @@
                         "canva",
                         "dropbox",
                         "loom",
+                        "claude",
                         "outro"
                       ]
                     },
@@ -2784,6 +2831,880 @@
         }
       }
     },
+    "/atividades": {
+      "get": {
+        "summary": "O que aconteceu no painel, do mais recente para o mais antigo",
+        "tags": [
+          "Painel"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "atividades": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "autor": {
+                            "type": "string"
+                          },
+                          "acao": {
+                            "type": "string"
+                          },
+                          "alvo": {
+                            "type": "string"
+                          },
+                          "detalhe": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "criadoEm": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "autor",
+                          "acao",
+                          "alvo",
+                          "detalhe",
+                          "criadoEm"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "atividades"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices": {
+      "get": {
+        "summary": "Invoices emitidos, do mais recente para o mais antigo",
+        "tags": [
+          "Invoices"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invoices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "numero": {
+                            "type": "string"
+                          },
+                          "data": {
+                            "type": "string"
+                          },
+                          "nome": {
+                            "type": "string"
+                          },
+                          "cpf": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "telefone": {
+                            "type": "string"
+                          },
+                          "endereco": {
+                            "type": "string"
+                          },
+                          "itens": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "fornecedor": {
+                                  "type": "string"
+                                },
+                                "quantidade": {
+                                  "type": "string"
+                                },
+                                "valor": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "fornecedor",
+                                "quantidade",
+                                "valor"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "criadoEm": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "numero",
+                          "data",
+                          "nome",
+                          "cpf",
+                          "email",
+                          "telefone",
+                          "endereco",
+                          "itens",
+                          "criadoEm"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "invoices"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Emite um invoice",
+        "tags": [
+          "Invoices"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "numero": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "string"
+                  },
+                  "nome": {
+                    "type": "string"
+                  },
+                  "cpf": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "telefone": {
+                    "type": "string"
+                  },
+                  "endereco": {
+                    "type": "string"
+                  },
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "fornecedor": {
+                          "type": "string"
+                        },
+                        "quantidade": {
+                          "type": "string"
+                        },
+                        "valor": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "fornecedor",
+                        "quantidade",
+                        "valor"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "numero",
+                  "data",
+                  "nome",
+                  "cpf",
+                  "email",
+                  "telefone",
+                  "endereco",
+                  "itens"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "numero": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "cpf": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "telefone": {
+                      "type": "string"
+                    },
+                    "endereco": {
+                      "type": "string"
+                    },
+                    "itens": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "fornecedor": {
+                            "type": "string"
+                          },
+                          "quantidade": {
+                            "type": "string"
+                          },
+                          "valor": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fornecedor",
+                          "quantidade",
+                          "valor"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "criadoEm": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "numero",
+                    "data",
+                    "nome",
+                    "cpf",
+                    "email",
+                    "telefone",
+                    "endereco",
+                    "itens",
+                    "criadoEm"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices/{id}": {
+      "put": {
+        "summary": "Reescreve um invoice já emitido",
+        "tags": [
+          "Invoices"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "numero": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "string"
+                  },
+                  "nome": {
+                    "type": "string"
+                  },
+                  "cpf": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "telefone": {
+                    "type": "string"
+                  },
+                  "endereco": {
+                    "type": "string"
+                  },
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "fornecedor": {
+                          "type": "string"
+                        },
+                        "quantidade": {
+                          "type": "string"
+                        },
+                        "valor": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "fornecedor",
+                        "quantidade",
+                        "valor"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "numero",
+                  "data",
+                  "nome",
+                  "cpf",
+                  "email",
+                  "telefone",
+                  "endereco",
+                  "itens"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "numero": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "cpf": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "telefone": {
+                      "type": "string"
+                    },
+                    "endereco": {
+                      "type": "string"
+                    },
+                    "itens": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "fornecedor": {
+                            "type": "string"
+                          },
+                          "quantidade": {
+                            "type": "string"
+                          },
+                          "valor": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fornecedor",
+                          "quantidade",
+                          "valor"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "criadoEm": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "numero",
+                    "data",
+                    "nome",
+                    "cpf",
+                    "email",
+                    "telefone",
+                    "endereco",
+                    "itens",
+                    "criadoEm"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Exclui um invoice",
+        "tags": [
+          "Invoices"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acessos-equipe": {
+      "get": {
+        "summary": "Entradas no painel, uma por login",
+        "tags": [
+          "Equipe"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "acessos": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "nome": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "entradaEm": {
+                            "type": "string"
+                          },
+                          "navegador": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sistema": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "ip": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "nome",
+                          "email",
+                          "entradaEm",
+                          "navegador",
+                          "sistema",
+                          "ip"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "acessos"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/administradores": {
       "post": {
         "summary": "Cadastra uma pessoa na equipe e cria o acesso dela",
@@ -2833,7 +3754,7 @@
                   },
                   "senha": {
                     "type": "string",
-                    "minLength": 8
+                    "minLength": 6
                   }
                 },
                 "required": [
@@ -3032,7 +3953,7 @@
                   },
                   "senha": {
                     "type": "string",
-                    "minLength": 8
+                    "minLength": 6
                   }
                 }
               }

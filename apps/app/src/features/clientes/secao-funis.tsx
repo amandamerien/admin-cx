@@ -1,13 +1,17 @@
+import { cn } from '@repo/ui'
 import { GitBranch, Plus } from 'lucide-react'
-import { NomeComAvatar } from './avatares'
+import { ResponsaveisComAvatar } from './avatares'
 import {
   type Administrador,
+  CLASSES_STATUS_FUNIL,
   type Cliente,
   ETAPA_FUNIL_LABEL,
   ETAPAS_FUNIL,
   type Funil,
   formatarData,
   progressoDoFunil,
+  responsaveisDoFunil,
+  STATUS_FUNIL_LABEL,
   type StatusFunil,
 } from './dados'
 import { DonutEtapa } from './graficos'
@@ -18,6 +22,8 @@ interface SecaoFunisProps {
   clientes: Cliente[]
   funis: Funil[]
   administradores: Administrador[]
+  /** Sem isto a tabela é só leitura. */
+  podeEditar: boolean
   onAdicionarFunil: () => void
   onEditarFunil: (funil: Funil) => void
   onExcluirFunil: (funil: Funil) => void
@@ -29,6 +35,7 @@ export function SecaoFunis({
   clientes,
   funis,
   administradores,
+  podeEditar,
   onAdicionarFunil,
   onEditarFunil,
   onExcluirFunil,
@@ -51,14 +58,16 @@ export function SecaoFunis({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onAdicionarFunil}
-          className="mt-1 flex h-10 items-center gap-2 rounded-full bg-white px-5 font-inter font-medium text-[#131316] text-sm transition-colors hover:bg-white/90"
-        >
-          <Plus className="size-4" />
-          Adicionar entrega
-        </button>
+        {podeEditar && (
+          <button
+            type="button"
+            onClick={onAdicionarFunil}
+            className="mt-1 flex h-10 items-center gap-2 rounded-full bg-white px-5 font-inter font-medium text-[#131316] text-sm transition-colors hover:bg-white/90"
+          >
+            <Plus className="size-4" />
+            Adicionar entrega
+          </button>
+        )}
       </div>
     )
   }
@@ -106,9 +115,9 @@ export function SecaoFunis({
                 </td>
 
                 <td className="px-4 py-3 font-inter text-[#ABABAB] text-sm">
-                  <NomeComAvatar
+                  <ResponsaveisComAvatar
                     administradores={administradores}
-                    nome={funil.responsavel}
+                    nomes={responsaveisDoFunil(funil)}
                   />
                 </td>
 
@@ -127,19 +136,32 @@ export function SecaoFunis({
                 </td>
 
                 <td className="px-4 py-3">
-                  <SeletorStatus
-                    status={funil.status}
-                    rotulo={funil.nome}
-                    onSelecionar={(status) => onAlterarStatus(funil, status)}
-                  />
+                  {podeEditar ? (
+                    <SeletorStatus
+                      status={funil.status}
+                      rotulo={funil.nome}
+                      onSelecionar={(status) => onAlterarStatus(funil, status)}
+                    />
+                  ) : (
+                    <span
+                      className={cn(
+                        'inline-flex rounded-full px-2 py-0.5 font-inter font-medium text-xs ring-1 ring-inset',
+                        CLASSES_STATUS_FUNIL[funil.status],
+                      )}
+                    >
+                      {STATUS_FUNIL_LABEL[funil.status]}
+                    </span>
+                  )}
                 </td>
 
                 <td className="px-4 py-3">
-                  <MenuAcoes
-                    rotulo={funil.nome}
-                    onEditar={() => onEditarFunil(funil)}
-                    onExcluir={() => onExcluirFunil(funil)}
-                  />
+                  {podeEditar && (
+                    <MenuAcoes
+                      rotulo={funil.nome}
+                      onEditar={() => onEditarFunil(funil)}
+                      onExcluir={() => onExcluirFunil(funil)}
+                    />
+                  )}
                 </td>
               </tr>
             ))}

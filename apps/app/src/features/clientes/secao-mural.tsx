@@ -3,7 +3,6 @@ import {
   MessageSquare,
   MousePointer2,
   Palette,
-  PenLine,
   StickyNote,
   Trash2,
 } from 'lucide-react'
@@ -19,6 +18,9 @@ import {
   EMOJIS_MURAL,
   type TipoAnotacao,
 } from './dados'
+import { alternarNegrito, TextoComNegrito } from './texto-rico'
+import { useArrasto } from './usar-arrasto'
+import { useTextoSalvo } from './usar-texto-salvo'
 
 /* Ferramenta ativa da barra: define o que um clique no quadro cria. */
 type Ferramenta = 'selecionar' | TipoAnotacao
@@ -42,6 +44,7 @@ function Comentario({
   aberto,
   onAlternar,
   onMudarTexto,
+  onMover,
   onExcluir,
 }: {
   anotacao: Anotacao
@@ -51,9 +54,18 @@ function Comentario({
   aberto: boolean
   onAlternar: () => void
   onMudarTexto: (texto: string) => void
+  onMover: (x: number, y: number) => void
   onExcluir: () => void
 }) {
   const campoRef = useRef<HTMLTextAreaElement>(null)
+  const { texto, mudar, salvarAgora } = useTextoSalvo(
+    anotacao.texto,
+    onMudarTexto,
+  )
+  const { arrastando, aoPressionar } = useArrasto({
+    centrado: true,
+    onMover,
+  })
 
   /* Ao abrir o balão o cursor já vai para o texto: o selo é pequeno demais
      para valer um segundo clique. */
@@ -61,15 +73,51 @@ function Comentario({
     if (aberto) campoRef.current?.focus()
   }, [aberto])
 
+  /* Mesma ideia do post-it: o balão acompanha o comentário. */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refaz a medida a cada texto
+  useEffect(() => {
+    const campo = campoRef.current
+    if (!campo) return
+
+    campo.style.height = 'auto'
+    campo.style.height = `${campo.scrollHeight}px`
+  }, [texto, aberto])
+
+  /* De que lado o balão abre.
+   *
+   * Ele sempre abria para cima e para a direita; num comentário colado no topo
+   * do quadro isso jogava o cabeçalho para fora — e é lá que fica a lixeira,
+   * então não dava nem para apagar. A posição já é porcentagem do quadro, então
+   * dá para decidir o lado sem medir nada: perto do topo abre para baixo, perto
+   * da direita alinha pela direita. */
+  const abreParaBaixo = anotacao.y < 45
+  const alinhaDireita = anotacao.x > 60
+
   return (
     <div
-      className="-translate-x-1/2 -translate-y-1/2 absolute"
+      onPointerDown={aoPressionar}
+      className={cn(
+        '-translate-x-1/2 -translate-y-1/2 group absolute',
+        arrastando ? 'cursor-grabbing' : 'cursor-grab',
+      )}
       style={{ left: `${anotacao.x}%`, top: `${anotacao.y}%` }}
     >
       {aberto && (
-        <div className="-left-3 absolute bottom-full z-10 mb-3 w-64 rounded-2xl bg-[#1A1A1C] p-4 shadow-xl ring-1 ring-white/8">
+        <div
+          className={cn(
+            'absolute z-10 w-64 rounded-2xl bg-[#1A1A1C] p-4 shadow-xl ring-1 ring-white/8',
+            abreParaBaixo ? 'top-full mt-3' : 'bottom-full mb-3',
+            alinhaDireita ? '-right-3' : '-left-3',
+          )}
+        >
           {/* Rabinho apontando para o selo. */}
-          <span className="-bottom-1.5 absolute left-3 size-3 rotate-45 rounded-[3px] bg-[#1A1A1C]" />
+          <span
+            className={cn(
+              'absolute size-3 rotate-45 rounded-[3px] bg-[#1A1A1C]',
+              abreParaBaixo ? '-top-1.5' : '-bottom-1.5',
+              alinhaDireita ? 'right-3' : 'left-3',
+            )}
+          />
 
           <div className="flex items-center gap-2.5">
             <Avatar
@@ -91,12 +139,13 @@ function Comentario({
           </div>
 
           <textarea
-            value={anotacao.texto}
-            onChange={(evento) => onMudarTexto(evento.target.value)}
+            value={texto}
+            onChange={(evento) => mudar(evento.target.value)}
+            onBlur={salvarAgora}
             placeholder="Escreva o comentário..."
             aria-label="Comentário"
             ref={campoRef}
-            className="h-20 w-full resize-none bg-transparent pt-2 font-inter text-[#C9C9CE] text-sm leading-relaxed outline-none placeholder:text-[#6F6F76]"
+            className="min-h-12 w-full resize-none overflow-hidden bg-transparent pt-2 font-inter text-[#C9C9CE] text-sm leading-relaxed outline-none placeholder:text-[#6F6F76]"
           />
         </div>
       )}
@@ -123,6 +172,7 @@ function Item({
   autoFoco,
   onMudarTexto,
   onMudarCor,
+  onMover,
   onExcluir,
 }: {
   anotacao: Anotacao
@@ -130,14 +180,62 @@ function Item({
   autoFoco: boolean
   onMudarTexto: (texto: string) => void
   onMudarCor: (cor: CorAnotacao) => void
+  onMover: (x: number, y: number) => void
   onExcluir: () => void
 }) {
   const [paletaAberta, setPaletaAberta] = useState(false)
+  /* Enquanto ninguém está escrevendo, o post-it mostra o texto formatado; ao
+     clicar, vira campo e as marcas de negrito aparecem para editar. */
+  const [editando, setEditando] = useState(autoFoco)
+  /* Trecho selecionado dentro do campo: enquanto houver um, o botão de
+     negrito fica à vista. */
+  const [temSelecao, setTemSelecao] = useState(false)
   const campoRef = useRef<HTMLTextAreaElement>(null)
+  const { texto, mudar, salvarAgora } = useTextoSalvo(
+    anotacao.texto,
+    onMudarTexto,
+  )
+  /* O emoji é ancorado pelo centro; o post-it, pelo canto. */
+  const { arrastando, aoPressionar } = useArrasto({
+    centrado: anotacao.tipo === 'emoji',
+    onMover,
+  })
+
+  /* O post-it acompanha o texto em vez de cortar: some a altura, mede o
+     conteúdo e assume esse tamanho. Sem zerar antes, ele só cresceria — nunca
+     encolheria ao apagar linhas. */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refaz a medida a cada texto
+  useEffect(() => {
+    const campo = campoRef.current
+    if (!campo) return
+
+    campo.style.height = 'auto'
+    campo.style.height = `${campo.scrollHeight}px`
+  }, [texto])
 
   useEffect(() => {
-    if (autoFoco) campoRef.current?.focus()
-  }, [autoFoco])
+    if (editando) campoRef.current?.focus()
+  }, [editando])
+
+  function aplicarNegrito() {
+    const campo = campoRef.current
+    if (!campo) return
+
+    const novo = alternarNegrito(
+      texto,
+      campo.selectionStart,
+      campo.selectionEnd,
+    )
+    if (novo.texto === texto) return
+
+    mudar(novo.texto)
+    /* As marcas mudam o tamanho do texto; devolver a seleção no próximo
+       quadro evita o cursor saltar para o fim. */
+    requestAnimationFrame(() => {
+      campo.setSelectionRange(novo.inicio, novo.fim)
+      campo.focus()
+    })
+  }
 
   const posicao = {
     left: `${anotacao.x}%`,
@@ -147,7 +245,11 @@ function Item({
   if (anotacao.tipo === 'emoji') {
     return (
       <div
-        className="-translate-x-1/2 -translate-y-1/2 group absolute"
+        onPointerDown={aoPressionar}
+        className={cn(
+          '-translate-x-1/2 -translate-y-1/2 group absolute',
+          arrastando ? 'cursor-grabbing' : 'cursor-grab',
+        )}
         style={posicao}
       >
         <span className="select-none text-3xl">{anotacao.texto}</span>
@@ -165,25 +267,23 @@ function Item({
 
   return (
     <div
-      className="group absolute flex w-64 flex-col rounded-2xl border border-black/8 bg-white shadow-lg"
+      onPointerDown={aoPressionar}
+      className={cn(
+        'group absolute flex w-64 flex-col rounded-2xl border border-black/8 shadow-lg',
+        /* A cor é do papel, como num post-it de verdade — antes ela ficava
+           só num selo, que ocupava espaço sem dizer nada. */
+        CLASSES_ANOTACAO[anotacao.cor],
+        arrastando ? 'cursor-grabbing' : 'cursor-grab',
+      )}
       style={posicao}
     >
-      <div className="flex items-start justify-between gap-2 px-4 pt-4">
-        <span
-          className={cn(
-            'flex size-8 items-center justify-center rounded-full text-white',
-            CLASSES_ANOTACAO[anotacao.cor],
-          )}
-        >
-          <PenLine className="size-4" />
-        </span>
-
+      <div className="flex items-start justify-end gap-2 px-2 pt-2">
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
           <button
             type="button"
             onClick={() => setPaletaAberta((aberta) => !aberta)}
             aria-label="Cor da anotação"
-            className="flex size-6 items-center justify-center rounded-md text-[#6B6B70] hover:bg-black/8"
+            className="flex size-6 items-center justify-center rounded-md text-black/45 hover:bg-black/10 hover:text-black/70"
           >
             <Palette className="size-3.5" />
           </button>
@@ -192,7 +292,7 @@ function Item({
             type="button"
             onClick={onExcluir}
             aria-label="Excluir"
-            className="flex size-6 items-center justify-center rounded-md text-[#6B6B70] hover:bg-black/8 hover:text-rose-500"
+            className="flex size-6 items-center justify-center rounded-md text-black/45 hover:bg-black/10 hover:text-rose-700"
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -225,19 +325,61 @@ function Item({
         </div>
       )}
 
-      {/* Na nota o autor vem em destaque, como título do cartão. */}
-      <p className="px-4 pt-3 font-inter font-semibold text-[#1F2123] text-lg leading-tight">
+      {editando ? (
+        <div className="relative">
+          {temSelecao && (
+            <button
+              type="button"
+              /* onMouseDown em vez de onClick: o clique tiraria o foco do
+                 campo e a seleção sumiria antes de chegar aqui. */
+              onMouseDown={(evento) => {
+                evento.preventDefault()
+                aplicarNegrito()
+              }}
+              className="absolute top-0 right-3 z-10 flex size-6 items-center justify-center rounded-md bg-[#1A1A1C] font-inter font-semibold text-white text-xs shadow-lg"
+              title="Negrito (duplo clique numa palavra e clique aqui)"
+            >
+              B
+            </button>
+          )}
+
+          <textarea
+            value={texto}
+            onChange={(evento) => mudar(evento.target.value)}
+            onSelect={(evento) => {
+              const campo = evento.currentTarget
+              setTemSelecao(campo.selectionStart !== campo.selectionEnd)
+            }}
+            onBlur={() => {
+              salvarAgora()
+              setEditando(false)
+              setTemSelecao(false)
+            }}
+            placeholder="Escreva a nota..."
+            aria-label="Anotação"
+            ref={campoRef}
+            className="min-h-16 w-full resize-none overflow-hidden bg-transparent px-4 pt-1 font-inter text-[#1F2123] text-sm leading-relaxed outline-none placeholder:text-black/35"
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditando(true)}
+          className="min-h-16 whitespace-pre-wrap px-4 pt-1 text-left font-inter text-[#1F2123] text-sm leading-relaxed"
+        >
+          {texto.trim() === '' ? (
+            <span className="text-black/35">Escreva a nota...</span>
+          ) : (
+            <TextoComNegrito texto={texto} />
+          )}
+        </button>
+      )}
+
+      {/* A assinatura fica no rodapé, discreta: quem lê quer o recado, não
+          quem escreveu. */}
+      <p className="px-4 pb-3 font-inter text-[8px] text-black/45">
         {anotacao.autor}
       </p>
-
-      <textarea
-        value={anotacao.texto}
-        onChange={(evento) => onMudarTexto(evento.target.value)}
-        placeholder="Escreva a nota..."
-        aria-label="Anotação"
-        ref={campoRef}
-        className="h-28 resize-none bg-transparent px-4 pt-2 pb-4 font-inter text-[#5A5A61] text-sm leading-relaxed outline-none placeholder:text-[#9A9AA0]"
-      />
     </div>
   )
 }
@@ -422,6 +564,7 @@ export function SecaoMural({
                 )
               }
               onMudarTexto={(texto) => onAtualizar(anotacao, { texto })}
+              onMover={(x, y) => onAtualizar(anotacao, { x, y })}
               onExcluir={() => onExcluir(anotacao)}
             />
           ) : (
@@ -431,6 +574,7 @@ export function SecaoMural({
               autoFoco={recemCriado === anotacao.id}
               onMudarTexto={(texto) => onAtualizar(anotacao, { texto })}
               onMudarCor={(cor) => onAtualizar(anotacao, { cor })}
+              onMover={(x, y) => onAtualizar(anotacao, { x, y })}
               onExcluir={() => onExcluir(anotacao)}
             />
           ),

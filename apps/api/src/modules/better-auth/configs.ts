@@ -20,6 +20,9 @@ export function createAuthConfig(): BetterAuthOptions {
     }),
     emailAndPassword: {
       enabled: true,
+      /* O padrão da lib é 8. Baixado para caber a senha padrão de
+         administrador (adm@123, 7 caracteres). */
+      minPasswordLength: 6,
     },
     user: { modelName: 'users' },
     session: { modelName: 'sessions' },

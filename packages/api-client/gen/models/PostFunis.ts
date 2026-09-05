@@ -55,9 +55,9 @@ export type PostFunis201 = {
     */
     status: PostFunis201StatusEnumKey;
     /**
-     * @type string
+     * @type array
     */
-    responsavel: string;
+    responsaveis: string[];
     dataEntrega: (string | null);
 };
 
@@ -125,9 +125,9 @@ export type PostFunisMutationRequest = {
     */
     status: PostFunisMutationRequestStatusEnumKey;
     /**
-     * @type string
+     * @type array
     */
-    responsavel: string;
+    responsaveis: string[];
     dataEntrega: (string | null);
 };
 

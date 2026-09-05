@@ -48,8 +48,8 @@ export function LoginScreen() {
 
       <div className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-[#131316]/80 p-8 shadow-2xl backdrop-blur-sm">
         <img
-          src="/images/logo-white.webp"
-          alt="Clickmax"
+          src="/images/cx-delivery.webp"
+          alt="CX Delivery"
           className="mx-auto h-6 w-auto"
         />
 

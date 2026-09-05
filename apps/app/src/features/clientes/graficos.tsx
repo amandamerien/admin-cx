@@ -151,6 +151,77 @@ export function Bloco({
 
 /* Anel de progresso da etapa. O arco azul cobre a fração da esteira já
  * percorrida; passar o mouse mostra o nome da etapa. */
+/* Anel de "quanto do combinado já saiu": concluídas sobre contratadas. */
+export function AnelProgresso({
+  feito,
+  total,
+  compacto = false,
+  className,
+}: {
+  feito: number
+  total: number
+  /* No cartão ele divide a linha com os selos, então acompanha o tamanho
+     deles; na ficha, onde há espaço, fica maior. */
+  compacto?: boolean
+  className?: string
+}) {
+  const raio = 8
+  const circunferencia = 2 * Math.PI * raio
+  const fracao = total > 0 ? Math.min(feito / total, 1) : 0
+  const completo = total > 0 && feito >= total
+
+  return (
+    <span
+      className={cn(
+        'flex items-center',
+        compacto ? 'gap-1.5' : 'gap-2',
+        className,
+      )}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className={cn('-rotate-90 shrink-0', compacto ? 'size-4' : 'size-5')}
+        role="img"
+        aria-label={`${feito} de ${total} entregas concluídas`}
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r={raio}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={compacto ? 3.5 : 3}
+          className="text-white/10"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r={raio}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={compacto ? 3.5 : 3}
+          strokeLinecap="round"
+          strokeDasharray={circunferencia}
+          strokeDashoffset={circunferencia * (1 - fracao)}
+          className={cn(
+            'transition-[stroke-dashoffset] duration-300',
+            completo ? 'text-emerald-400' : 'text-sky-400',
+          )}
+        />
+      </svg>
+
+      <span
+        className={cn(
+          'font-inter tabular-nums',
+          compacto ? 'text-[10px]' : 'text-sm',
+        )}
+      >
+        {feito} de {total}
+      </span>
+    </span>
+  )
+}
+
 export function DonutEtapa({
   progresso,
   rotulo,

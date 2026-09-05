@@ -53,6 +53,9 @@ export interface Cliente {
      mostrar "—" do que chutar um plano comercial. */
   plano: PlanoCliente | null
   cicloPlano: CicloPlano | null
+  /* Quantas entregas o cliente contratou. Zero = não há meta combinada, e a
+     ficha simplesmente não mostra progresso. */
+  funisContratados: number
 }
 
 export const STATUS_LABEL: Record<StatusCliente, string> = {
@@ -192,8 +195,8 @@ export interface Funil {
   nome: string
   etapa: EtapaFunil
   status: StatusFunil
-  /* Quem do time responde por este funil. */
-  responsavel: string
+  /* Quem do time responde por esta entrega. Pode ser mais de uma pessoa. */
+  responsaveis: string[]
   /* Data de entrega prevista, em ISO (YYYY-MM-DD). `null` enquanto não
      houver data combinada. */
   dataEntrega: string | null
@@ -205,6 +208,40 @@ export interface Funil {
 export function progressoDaEtapa(etapa: EtapaFunil) {
   const posicao = ETAPAS_FUNIL.indexOf(etapa)
   return Math.round(((posicao + 1) / ETAPAS_FUNIL.length) * 100)
+}
+
+/* Os meses do filtro do Dashboard: o atual e os doze seguintes.
+ *
+ * Vai para a frente, não para trás, porque o que se filtra é a data prevista
+ * de entrega — o interesse é no que ainda vai vencer. O mês corrente entra
+ * junto para as entregas deste mês não ficarem inalcançáveis.
+ *
+ * Guardados como AAAA-MM, o mesmo prefixo da data de entrega. */
+export interface MesDoFiltro {
+  valor: string
+  rotulo: string
+}
+
+export function mesesDoFiltro(hoje = new Date()): MesDoFiltro[] {
+  return Array.from({ length: 13 }, (_, passo) => {
+    const data = new Date(hoje.getFullYear(), hoje.getMonth() + passo, 1)
+    const mes = `${data.getMonth() + 1}`.padStart(2, '0')
+
+    return {
+      valor: `${data.getFullYear()}-${mes}`,
+      rotulo: data.toLocaleDateString('pt-BR', {
+        month: 'long',
+        year: 'numeric',
+      }),
+    }
+  })
+}
+
+/* Filtra as entregas pela data prevista. Entrega sem data combinada fica de
+ * fora de qualquer mês — ela ainda não pertence a nenhum. */
+export function funisDoMes(funis: Funil[], mes: string) {
+  if (!mes) return funis
+  return funis.filter((funil) => funil.dataEntrega?.startsWith(mes))
 }
 
 /* Progresso do funil como um todo. Entregue é 100% por definição: o trabalho
@@ -234,6 +271,7 @@ export const TIPOS_ARQUIVO = [
   'canva',
   'dropbox',
   'loom',
+  'claude',
   'outro',
 ] as const
 
@@ -249,6 +287,7 @@ export const TIPO_ARQUIVO_LABEL: Record<TipoArquivo, string> = {
   canva: 'Canva',
   dropbox: 'Dropbox',
   loom: 'Loom',
+  claude: 'Claude',
   outro: 'Outro',
 }
 
@@ -508,11 +547,15 @@ export function entreguesPorMes(
 }
 
 /* Quantos funis cada responsável tem, do maior para o menor. */
+/* Carga de cada pessoa. Entrega com duas mãos conta para as duas — o número
+ * responde "quantas entregas estão comigo?", não "como o total se divide". */
 export function funisPorResponsavel(funis: Funil[]) {
   const contagem = new Map<string, number>()
 
   for (const funil of funis) {
-    contagem.set(funil.responsavel, (contagem.get(funil.responsavel) ?? 0) + 1)
+    for (const nome of responsaveisDoFunil(funil)) {
+      contagem.set(nome, (contagem.get(nome) ?? 0) + 1)
+    }
   }
 
   return [...contagem.entries()]
@@ -566,6 +609,12 @@ export function avatarDoResponsavel(
   nome: string,
 ): AvatarId | null {
   return administradores.find((pessoa) => pessoa.nome === nome)?.avatar ?? null
+}
+
+/* Só os nomes que a lista traz, na ordem em que foram escolhidos. Serve para a
+ * tela não ter que se preocupar com entrega sem responsável. */
+export function responsaveisDoFunil(funil: { responsaveis: string[] }) {
+  return funil.responsaveis.filter((nome) => nome.trim() !== '')
 }
 
 /* Administradores primeiro, editores depois; dentro de cada grupo, a ordem de

@@ -50,6 +50,12 @@ export type PostClientes201 = {
     status: PostClientes201StatusEnumKey;
     plano: (PostClientes201PlanoEnumKey | null);
     cicloPlano: (PostClientes201CicloPlanoEnumKey | null);
+    /**
+     * @minLength 0
+     * @maxLength 9007199254740991
+     * @type integer
+    */
+    funisContratados: number;
 };
 
 /**
@@ -111,6 +117,12 @@ export type PostClientesMutationRequest = {
     status: PostClientesMutationRequestStatusEnumKey;
     plano: (PostClientesMutationRequestPlanoEnumKey | null);
     cicloPlano: (PostClientesMutationRequestCicloPlanoEnumKey | null);
+    /**
+     * @minLength 0
+     * @maxLength 9007199254740991
+     * @type integer
+    */
+    funisContratados: number;
 };
 
 export type PostClientesMutationResponse = PostClientes201;

@@ -57,6 +57,12 @@ export type PatchClientesId200 = {
     status: PatchClientesId200StatusEnumKey;
     plano: (PatchClientesId200PlanoEnumKey | null);
     cicloPlano: (PatchClientesId200CicloPlanoEnumKey | null);
+    /**
+     * @minLength 0
+     * @maxLength 9007199254740991
+     * @type integer
+    */
+    funisContratados: number;
 };
 
 /**
@@ -128,6 +134,12 @@ export type PatchClientesIdMutationRequest = {
     status?: PatchClientesIdMutationRequestStatusEnumKey;
     plano?: (PatchClientesIdMutationRequestPlanoEnumKey | null);
     cicloPlano?: (PatchClientesIdMutationRequestCicloPlanoEnumKey | null);
+    /**
+     * @minLength 0
+     * @maxLength 9007199254740991
+     * @type integer | undefined
+    */
+    funisContratados?: number;
 };
 
 export type PatchClientesIdMutationResponse = PatchClientesId200;

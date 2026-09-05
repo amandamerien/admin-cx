@@ -1,6 +1,7 @@
 import { cn } from '@repo/ui'
 import { Plus, ShieldCheck, Users } from 'lucide-react'
 import { Avatar } from './avatares'
+import { BotaoCopiar } from './botao-copiar'
 import {
   type Administrador,
   CLASSES_PAPEL,
@@ -12,6 +13,8 @@ import { MenuAcoes } from './menu-acoes'
 
 interface SecaoAdministradoresProps {
   administradores: Administrador[]
+  /** Sem isto a lista é só leitura. */
+  podeGerenciar: boolean
   onAdicionar: () => void
   onEditar: (administrador: Administrador) => void
   onExcluir: (administrador: Administrador) => void
@@ -20,6 +23,7 @@ interface SecaoAdministradoresProps {
 /* Administradores — o time que aparece no campo "Responsável" dos funis. */
 export function SecaoAdministradores({
   administradores,
+  podeGerenciar,
   onAdicionar,
   onEditar,
   onExcluir,
@@ -99,12 +103,18 @@ export function SecaoAdministradores({
 
                   <td className="px-4 py-3 font-inter text-[#ABABAB] text-sm">
                     {administrador.email ? (
-                      <a
-                        href={`mailto:${administrador.email}`}
-                        className="hover:underline"
-                      >
-                        {administrador.email}
-                      </a>
+                      <span className="group/email flex min-w-0 items-center gap-1">
+                        <a
+                          href={`mailto:${administrador.email}`}
+                          className="truncate hover:underline"
+                        >
+                          {administrador.email}
+                        </a>
+                        <BotaoCopiar
+                          valor={administrador.email}
+                          rotulo="e-mail"
+                        />
+                      </span>
                     ) : (
                       '—'
                     )}
@@ -126,11 +136,13 @@ export function SecaoAdministradores({
                   </td>
 
                   <td className="px-4 py-3">
-                    <MenuAcoes
-                      rotulo={administrador.nome}
-                      onEditar={() => onEditar(administrador)}
-                      onExcluir={() => onExcluir(administrador)}
-                    />
+                    {podeGerenciar && (
+                      <MenuAcoes
+                        rotulo={administrador.nome}
+                        onEditar={() => onEditar(administrador)}
+                        onExcluir={() => onExcluir(administrador)}
+                      />
+                    )}
                   </td>
                 </tr>
               ))}

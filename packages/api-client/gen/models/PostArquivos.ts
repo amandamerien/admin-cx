@@ -14,6 +14,7 @@ export const postArquivos201TipoEnum = {
     canva: "canva",
     dropbox: "dropbox",
     loom: "loom",
+    claude: "claude",
     outro: "outro"
 } as const;
 
@@ -75,6 +76,7 @@ export const postArquivosMutationRequestTipoEnum = {
     canva: "canva",
     dropbox: "dropbox",
     loom: "loom",
+    claude: "claude",
     outro: "outro"
 } as const;
 

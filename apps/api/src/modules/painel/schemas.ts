@@ -47,6 +47,7 @@ export const tipoArquivoSchema = z.enum([
   'canva',
   'dropbox',
   'loom',
+  'claude',
   'outro',
 ])
 
@@ -94,6 +95,8 @@ export const clienteSchema = z.object({
   /** Nulo nos clientes cadastrados antes de o plano existir na ficha. */
   plano: planoClienteSchema.nullable(),
   cicloPlano: cicloPlanoSchema.nullable(),
+  /** Quantas entregas o cliente contratou; 0 = sem meta combinada. */
+  funisContratados: z.number().int().min(0),
 })
 
 export const funilSchema = z.object({
@@ -102,7 +105,7 @@ export const funilSchema = z.object({
   nome: z.string(),
   etapa: etapaFunilSchema,
   status: colunaPipelineSchema,
-  responsavel: z.string(),
+  responsaveis: z.array(z.string()),
   /** AAAA-MM-DD, como o resto das datas da tela. */
   dataEntrega: z.string().nullable(),
 })
@@ -166,6 +169,71 @@ export const administradorSchema = z.object({
   temAcesso: z.boolean(),
 })
 
+/* Uma coisa que aconteceu no painel. */
+export const atividadeSchema = z.object({
+  id: z.string(),
+  autor: z.string(),
+  /** `cliente_criado`, `entrega_criada`… a tela monta a frase. */
+  acao: z.string(),
+  alvo: z.string(),
+  detalhe: z.string().nullable(),
+  criadoEm: z.string(),
+})
+
+export const atividadesSchema = z.object({
+  atividades: z.array(atividadeSchema),
+})
+
+/* Invoice emitido pelo painel, com as linhas da descrição. */
+export const itemInvoiceSchema = z.object({
+  id: z.string(),
+  fornecedor: z.string(),
+  quantidade: z.string(),
+  /** Valor total da linha, em reais. */
+  valor: z.number(),
+})
+
+export const invoiceSchema = z.object({
+  id: z.string(),
+  numero: z.string(),
+  /** AAAA-MM-DD, como o resto das datas da tela. */
+  data: z.string(),
+  nome: z.string(),
+  cpf: z.string(),
+  email: z.string(),
+  telefone: z.string(),
+  endereco: z.string(),
+  itens: z.array(itemInvoiceSchema),
+  criadoEm: z.string(),
+})
+
+export const invoicesSchema = z.object({ invoices: z.array(invoiceSchema) })
+
+/* Na gravação os itens vêm sem id: eles são reescritos por inteiro a cada
+ * salvamento, então não há o que casar com o que já existe. */
+export const invoiceInputSchema = invoiceSchema
+  .omit({ id: true, criadoEm: true, itens: true })
+  .extend({
+    itens: z.array(itemInvoiceSchema.omit({ id: true })),
+  })
+
+/* Uma entrada no painel, gravada no momento do login. */
+export const acessoEquipeSchema = z.object({
+  id: z.string(),
+  nome: z.string(),
+  email: z.string(),
+  /** ISO completo: a tela formata a data e a hora. */
+  entradaEm: z.string(),
+  /** Navegador e sistema lidos do user-agent; nulos quando ele não veio. */
+  navegador: z.string().nullable(),
+  sistema: z.string().nullable(),
+  ip: z.string().nullable(),
+})
+
+export const acessosEquipeSchema = z.object({
+  acessos: z.array(acessoEquipeSchema),
+})
+
 // ─── Retrato completo do painel ───────────────────────────────
 
 /** Tudo que a tela precisa para montar, em uma chamada só. */
@@ -220,7 +288,7 @@ export const administradorInputSchema = administradorSchema
   .omit({ id: true, temAcesso: true })
   .extend({
     email: z.string().email('Informe um e-mail válido'),
-    senha: z.string().min(8, 'A senha precisa de ao menos 8 caracteres'),
+    senha: z.string().min(6, 'A senha precisa de ao menos 6 caracteres'),
   })
 
 /* Na edição a senha só aparece para quem ainda não tem conta (a equipe
@@ -228,7 +296,7 @@ export const administradorInputSchema = administradorSchema
 export const administradorPatchSchema = administradorSchema
   .omit({ id: true, temAcesso: true })
   .partial()
-  .extend({ senha: z.string().min(8).optional() })
+  .extend({ senha: z.string().min(6).optional() })
 
 /** Erro padrão do painel. */
 export const erroSchema = z.object({ error: z.string() })
@@ -245,3 +313,7 @@ export type NotaDTO = z.infer<typeof notaSchema>
 export type ItemChecklistDTO = z.infer<typeof itemChecklistSchema>
 export type AnotacaoDTO = z.infer<typeof anotacaoSchema>
 export type AdministradorDTO = z.infer<typeof administradorSchema>
+export type AcessoEquipeDTO = z.infer<typeof acessoEquipeSchema>
+export type AtividadeDTO = z.infer<typeof atividadeSchema>
+export type InvoiceDTO = z.infer<typeof invoiceSchema>
+export type InvoiceInput = z.infer<typeof invoiceInputSchema>

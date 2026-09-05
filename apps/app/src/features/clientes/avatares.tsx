@@ -83,6 +83,12 @@ interface AvatarProps {
   rotulo?: string
 }
 
+/* A cor de fundo de cada bichinho, para quem precisa dela fora do desenho —
+ * o cursor de presença pinta o nome da pessoa com ela. */
+export const COR_AVATAR = Object.fromEntries(
+  Object.entries(DESENHOS).map(([id, desenho]) => [id, desenho.fundo]),
+) as Record<AvatarId, string>
+
 export function Avatar({ avatar, className, rotulo }: AvatarProps) {
   const desenho = DESENHOS[avatar]
 
@@ -113,6 +119,65 @@ export function Avatar({ avatar, className, rotulo }: AvatarProps) {
 /* Nome de alguém da equipe com o avatar do lado — pequeno, só para bater o
    olho e saber de quem é. Sem avatar quando o nome não é de ninguém
    cadastrado. */
+/* Vários responsáveis numa linha: os bichinhos encostados, e o nome só quando
+ * é uma pessoa só — com duas ou mais, os nomes lado a lado não caberiam na
+ * célula. Quem passa o mouse lê todos. */
+export function ResponsaveisComAvatar({
+  administradores,
+  nomes,
+  className,
+}: {
+  administradores: Administrador[]
+  nomes: string[]
+  className?: string
+}) {
+  if (nomes.length === 0) {
+    return <span className={cn('text-[#6F6F76]', className)}>—</span>
+  }
+
+  if (nomes.length === 1) {
+    return (
+      <NomeComAvatar
+        administradores={administradores}
+        nome={nomes[0] ?? ''}
+        className={className}
+      />
+    )
+  }
+
+  return (
+    <span
+      className={cn('flex min-w-0 items-center', className)}
+      title={nomes.join(', ')}
+    >
+      <span className="flex shrink-0 items-center -space-x-1">
+        {nomes.map((nome) => {
+          const avatar = avatarDoResponsavel(administradores, nome)
+
+          return avatar ? (
+            <Avatar
+              key={nome}
+              avatar={avatar}
+              rotulo={nome}
+              className="size-4 rounded-[4px] ring-1 ring-[#131316]"
+            />
+          ) : (
+            <span
+              key={nome}
+              title={nome}
+              className="flex size-4 shrink-0 items-center justify-center rounded-[4px] bg-white/8 font-inter font-medium text-[#8A8A8F] text-[9px] ring-1 ring-[#131316]"
+            >
+              {nome.trim().charAt(0).toUpperCase()}
+            </span>
+          )
+        })}
+      </span>
+
+      <span className="truncate pl-2 text-xs">{nomes.length} pessoas</span>
+    </span>
+  )
+}
+
 export function NomeComAvatar({
   administradores,
   nome,

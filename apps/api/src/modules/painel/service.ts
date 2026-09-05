@@ -1,16 +1,21 @@
-import { prisma } from '@repo/database'
+import { type Prisma, prisma } from '@repo/database'
 import { MODELO_CHECKLIST } from './modelo-checklist.js'
 import type {
   AcessoDTO,
+  AcessoEquipeDTO,
   AdministradorDTO,
   AnotacaoDTO,
   ArquivoDTO,
+  AtividadeDTO,
   ClienteDTO,
   FunilDTO,
+  InvoiceDTO,
+  InvoiceInput,
   ItemChecklistDTO,
   NotaDTO,
   Painel,
 } from './schemas.js'
+import { lerUserAgent } from './user-agent.js'
 
 /** AAAA-MM-DD — o formato que a tela usa em todas as datas. */
 function paraDiaIso(data: Date | null): string | null {
@@ -77,6 +82,7 @@ export class PainelService {
         status: dados.status,
         plano: dados.plano,
         cicloPlano: dados.cicloPlano,
+        funisContratados: dados.funisContratados,
         checklist: {
           create: MODELO_CHECKLIST.map((modelo, ordem) => ({
             grupo: modelo.grupo,
@@ -121,7 +127,7 @@ export class PainelService {
         nome: dados.nome,
         etapa: dados.etapa,
         status: dados.status,
-        responsavel: dados.responsavel,
+        responsaveis: dados.responsaveis,
         dataEntrega: paraData(dados.dataEntrega),
       },
     })
@@ -270,6 +276,14 @@ export class PainelService {
     return this.paraAdministradorDTO(administrador)
   }
 
+  /* O signUpEmail do Better Auth abre uma sessão junto com a conta. Quando o
+   * cadastro é feito por um administrador, essa sessão é de ninguém: a pessoa
+   * nem sabe que a conta existe ainda. Deixá-la viva mostraria um acesso que
+   * nunca houve na aba de Acessos. */
+  async descartarSessoesDe(userId: string) {
+    await prisma.sessions.deleteMany({ where: { userId } })
+  }
+
   /* Liga uma ficha antiga (cadastrada antes de a conta ser obrigatória) à
    * conta recém-criada para ela. */
   async vincularConta(id: string, userId: string) {
@@ -322,6 +336,197 @@ export class PainelService {
     return true
   }
 
+  /* Grava a entrada de alguém no painel. Chamado no momento do login, uma
+   * linha por vez que a pessoa entra. */
+  async registrarAcesso(dados: {
+    userId: string
+    nome: string
+    email: string
+    ip: string | null
+    userAgent: string | null
+  }) {
+    await prisma.acessoEquipe.create({ data: dados })
+  }
+
+  /* As últimas entradas no painel, da mais recente para a mais antiga. */
+  async listarAcessos(): Promise<AcessoEquipeDTO[]> {
+    const acessos = await prisma.acessoEquipe.findMany({
+      orderBy: { criadoEm: 'desc' },
+      take: 200,
+      include: {
+        user: { select: { administrador: { select: { nome: true } } } },
+      },
+    })
+
+    return acessos.map((acesso) => {
+      const { navegador, sistema } = lerUserAgent(acesso.userAgent)
+
+      return {
+        id: acesso.id,
+        /* O nome da ficha da equipe vem antes do que foi copiado no login:
+           se a pessoa mudou de nome depois, a lista mostra o atual. */
+        nome: acesso.user?.administrador?.nome ?? acesso.nome,
+        email: acesso.email,
+        entradaEm: acesso.criadoEm.toISOString(),
+        navegador,
+        sistema,
+        ip: acesso.ip || null,
+      }
+    })
+  }
+
+  // ─── Atividades ─────────────────────────────────────────────
+
+  /* O feed fala de clientes pelo nome, não pelo id. Se a ficha sumiu no meio
+   * do caminho, a atividade ainda vale — só fica sem o nome. */
+  async nomeDoCliente(id: string): Promise<string> {
+    const cliente = await prisma.cliente
+      .findUnique({ where: { id }, select: { nome: true } })
+      .catch(() => null)
+
+    return cliente?.nome ?? 'um cliente'
+  }
+
+  /* Registra o que acabou de acontecer. Nunca derruba a ação principal: se o
+   * feed falhar, a operação em si já aconteceu e é isso que importa. */
+  async registrarAtividade(dados: {
+    autorId: string | null
+    autorNome: string
+    acao: string
+    alvo: string
+    detalhe?: string | null
+  }) {
+    await prisma.atividade
+      .create({
+        data: {
+          autorId: dados.autorId,
+          autorNome: dados.autorNome,
+          acao: dados.acao,
+          alvo: dados.alvo,
+          detalhe: dados.detalhe ?? null,
+        },
+      })
+      .catch(() => null)
+  }
+
+  async listarAtividades(): Promise<AtividadeDTO[]> {
+    const atividades = await prisma.atividade.findMany({
+      orderBy: { criadoEm: 'desc' },
+      take: 60,
+      include: { autor: { select: { nome: true } } },
+    })
+
+    return atividades.map((a) => ({
+      id: a.id,
+      /* O nome atual da ficha tem preferência sobre o copiado: reflete
+         renomeações sem reescrever o histórico. */
+      autor: a.autor?.nome ?? a.autorNome,
+      acao: a.acao,
+      alvo: a.alvo,
+      detalhe: a.detalhe,
+      criadoEm: a.criadoEm.toISOString(),
+    }))
+  }
+
+  // ─── Invoices ───────────────────────────────────────────────
+
+  async listarInvoices(): Promise<InvoiceDTO[]> {
+    const invoices = await prisma.invoice.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { itens: { orderBy: { ordem: 'asc' } } },
+    })
+
+    return invoices.map(this.paraInvoiceDTO)
+  }
+
+  /* Salvar reescreve as linhas por inteiro: é mais simples e mais previsível
+   * do que casar item a item, e a lista é curta. */
+  async criarInvoice(dados: InvoiceInput): Promise<InvoiceDTO> {
+    const { itens, data, ...resto } = dados
+
+    const invoice = await prisma.invoice.create({
+      data: {
+        ...resto,
+        data: new Date(`${data}T00:00:00.000Z`),
+        itens: {
+          create: itens.map((item, ordem) => ({ ...item, ordem })),
+        },
+      },
+      include: { itens: { orderBy: { ordem: 'asc' } } },
+    })
+
+    return this.paraInvoiceDTO(invoice)
+  }
+
+  async atualizarInvoice(
+    id: string,
+    dados: InvoiceInput,
+  ): Promise<InvoiceDTO | null> {
+    const { itens, data, ...resto } = dados
+
+    const invoice = await prisma.invoice
+      .update({
+        where: { id },
+        data: {
+          ...resto,
+          data: new Date(`${data}T00:00:00.000Z`),
+          itens: {
+            deleteMany: {},
+            create: itens.map((item, ordem) => ({ ...item, ordem })),
+          },
+        },
+        include: { itens: { orderBy: { ordem: 'asc' } } },
+      })
+      .catch(() => null)
+
+    return invoice && this.paraInvoiceDTO(invoice)
+  }
+
+  async excluirInvoice(id: string): Promise<boolean> {
+    const apagado = await prisma.invoice
+      .delete({ where: { id } })
+      .catch(() => null)
+
+    return apagado !== null
+  }
+
+  private paraInvoiceDTO(i: {
+    id: string
+    numero: string
+    data: Date
+    nome: string
+    cpf: string
+    email: string
+    telefone: string
+    endereco: string
+    createdAt: Date
+    itens: {
+      id: string
+      fornecedor: string
+      quantidade: string
+      valor: Prisma.Decimal
+    }[]
+  }): InvoiceDTO {
+    return {
+      id: i.id,
+      numero: i.numero,
+      data: i.data.toISOString().slice(0, 10),
+      nome: i.nome,
+      cpf: i.cpf,
+      email: i.email,
+      telefone: i.telefone,
+      endereco: i.endereco,
+      criadoEm: i.createdAt.toISOString(),
+      /* Decimal do Prisma não atravessa JSON: vira número aqui. */
+      itens: i.itens.map((item) => ({
+        id: item.id,
+        fornecedor: item.fornecedor,
+        quantidade: item.quantidade,
+        valor: Number(item.valor),
+      })),
+    }
+  }
+
   /** Ficha da equipe correspondente a uma conta logada. */
   async fichaDoUsuario(userId: string) {
     return prisma.administrador.findUnique({ where: { userId } })
@@ -336,6 +541,7 @@ export class PainelService {
     status: ClienteDTO['status']
     plano: ClienteDTO['plano']
     cicloPlano: ClienteDTO['cicloPlano']
+    funisContratados: number
   }): ClienteDTO {
     return {
       id: c.id,
@@ -344,6 +550,7 @@ export class PainelService {
       status: c.status,
       plano: c.plano,
       cicloPlano: c.cicloPlano,
+      funisContratados: c.funisContratados,
     }
   }
 
@@ -353,7 +560,7 @@ export class PainelService {
     nome: string
     etapa: FunilDTO['etapa']
     status: FunilDTO['status']
-    responsavel: string
+    responsaveis: string[]
     dataEntrega: Date | null
   }): FunilDTO {
     return {
@@ -362,7 +569,7 @@ export class PainelService {
       nome: f.nome,
       etapa: f.etapa,
       status: f.status,
-      responsavel: f.responsavel,
+      responsaveis: f.responsaveis,
       dataEntrega: paraDiaIso(f.dataEntrega),
     }
   }

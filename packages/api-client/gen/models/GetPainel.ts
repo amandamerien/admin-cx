@@ -64,6 +64,7 @@ export const arquivosTipoEnum = {
     canva: "canva",
     dropbox: "dropbox",
     loom: "loom",
+    claude: "claude",
     outro: "outro"
 } as const;
 
@@ -147,6 +148,12 @@ export type GetPainel200 = {
         status: ClientesStatusEnumKey;
         plano: (ClientesPlanoEnumKey | null);
         cicloPlano: (ClientesCicloPlanoEnumKey | null);
+        /**
+         * @minLength 0
+         * @maxLength 9007199254740991
+         * @type integer
+        */
+        funisContratados: number;
     }[];
     /**
      * @type array
@@ -173,9 +180,9 @@ export type GetPainel200 = {
         */
         status: FunisStatusEnumKey;
         /**
-         * @type string
+         * @type array
         */
-        responsavel: string;
+        responsaveis: string[];
         dataEntrega: (string | null);
     }[];
     /**

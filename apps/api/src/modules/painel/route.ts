@@ -4,6 +4,7 @@ import { exigirEscrita, exigirGestaoDeEquipe, exigirSessao } from './guarda.js'
 import {
   acessoInputSchema,
   acessoSchema,
+  acessosEquipeSchema,
   administradorInputSchema,
   administradorPatchSchema,
   administradorSchema,
@@ -12,6 +13,7 @@ import {
   anotacaoSchema,
   arquivoInputSchema,
   arquivoSchema,
+  atividadesSchema,
   clienteInputSchema,
   clientePatchSchema,
   clienteSchema,
@@ -19,6 +21,9 @@ import {
   funilInputSchema,
   funilPatchSchema,
   funilSchema,
+  invoiceInputSchema,
+  invoiceSchema,
+  invoicesSchema,
   itemChecklistPatchSchema,
   itemChecklistSchema,
   notaInputSchema,
@@ -68,8 +73,16 @@ export const painelRoute = tp(async (scope) => {
       },
     },
     async (request, reply) => {
-      if (!(await exigirEscrita(scope, request, reply))) return
+      const autor = await exigirEscrita(scope, request, reply)
+      if (!autor) return
+
       const cliente = await scope.services.painel.criarCliente(request.body)
+      await scope.services.painel.registrarAtividade({
+        autorId: autor.id,
+        autorNome: autor.nome,
+        acao: 'cliente_criado',
+        alvo: cliente.nome,
+      })
       return reply.status(201).send(cliente)
     },
   )
@@ -139,10 +152,17 @@ export const painelRoute = tp(async (scope) => {
       },
     },
     async (request, reply) => {
-      if (!(await exigirEscrita(scope, request, reply))) return
-      return reply
-        .status(201)
-        .send(await scope.services.painel.criarFunil(request.body))
+      const autor = await exigirEscrita(scope, request, reply)
+      if (!autor) return
+
+      const funil = await scope.services.painel.criarFunil(request.body)
+      await scope.services.painel.registrarAtividade({
+        autorId: autor.id,
+        autorNome: autor.nome,
+        acao: 'entrega_criada',
+        alvo: funil.nome,
+      })
+      return reply.status(201).send(funil)
     },
   )
 
@@ -163,13 +183,27 @@ export const painelRoute = tp(async (scope) => {
       },
     },
     async (request, reply) => {
-      if (!(await exigirEscrita(scope, request, reply))) return
+      const autor = await exigirEscrita(scope, request, reply)
+      if (!autor) return
       const funil = await scope.services.painel.atualizarFunil(
         request.params.id,
         request.body,
       )
       if (!funil)
         return reply.status(404).send({ error: 'Funil não encontrado' })
+
+      /* Só a mudança de status vira notícia: renomear ou trocar a data não
+         interessa a quem está olhando o feed. */
+      if (request.body.status) {
+        await scope.services.painel.registrarAtividade({
+          autorId: autor.id,
+          autorNome: autor.nome,
+          acao: 'entrega_movida',
+          alvo: funil.nome,
+          detalhe: funil.status,
+        })
+      }
+
       return reply.status(200).send(funil)
     },
   )
@@ -210,10 +244,18 @@ export const painelRoute = tp(async (scope) => {
       },
     },
     async (request, reply) => {
-      if (!(await exigirEscrita(scope, request, reply))) return
-      return reply
-        .status(201)
-        .send(await scope.services.painel.criarArquivo(request.body))
+      const autor = await exigirEscrita(scope, request, reply)
+      if (!autor) return
+
+      const arquivo = await scope.services.painel.criarArquivo(request.body)
+      await scope.services.painel.registrarAtividade({
+        autorId: autor.id,
+        autorNome: autor.nome,
+        acao: 'arquivo_adicionado',
+        alvo: arquivo.nome,
+      })
+
+      return reply.status(201).send(arquivo)
     },
   )
 
@@ -307,6 +349,13 @@ export const painelRoute = tp(async (scope) => {
         request.body.texto,
         autor,
       )
+      await scope.services.painel.registrarAtividade({
+        autorId: autor.id,
+        autorNome: autor.nome,
+        acao: 'nota_escrita',
+        alvo: await scope.services.painel.nomeDoCliente(request.body.clienteId),
+      })
+
       return reply.status(201).send(nota)
     },
   )
@@ -436,6 +485,144 @@ export const painelRoute = tp(async (scope) => {
     },
   )
 
+  // ─── Atividades ───────────────────────────────────────────
+
+  scope.get(
+    '/atividades',
+    {
+      schema: {
+        tags: ['Painel'],
+        summary:
+          'O que aconteceu no painel, do mais recente para o mais antigo',
+        response: { 200: atividadesSchema, 401: erroSchema, 403: erroSchema },
+      },
+    },
+    async (request, reply) => {
+      if (!(await exigirSessao(scope, request, reply))) return
+      const atividades = await scope.services.painel.listarAtividades()
+      return reply.status(200).send({ atividades })
+    },
+  )
+
+  // ─── Invoices ─────────────────────────────────────────────
+
+  scope.get(
+    '/invoices',
+    {
+      schema: {
+        tags: ['Invoices'],
+        summary: 'Invoices emitidos, do mais recente para o mais antigo',
+        response: { 200: invoicesSchema, 401: erroSchema, 403: erroSchema },
+      },
+    },
+    async (request, reply) => {
+      if (!(await exigirSessao(scope, request, reply))) return
+      const invoices = await scope.services.painel.listarInvoices()
+      return reply.status(200).send({ invoices })
+    },
+  )
+
+  scope.post(
+    '/invoices',
+    {
+      schema: {
+        tags: ['Invoices'],
+        summary: 'Emite um invoice',
+        body: invoiceInputSchema,
+        response: { 201: invoiceSchema, 401: erroSchema, 403: erroSchema },
+      },
+    },
+    async (request, reply) => {
+      const autor = await exigirEscrita(scope, request, reply)
+      if (!autor) return
+
+      const invoice = await scope.services.painel.criarInvoice(request.body)
+      await scope.services.painel.registrarAtividade({
+        autorId: autor.id,
+        autorNome: autor.nome,
+        acao: 'invoice_criado',
+        alvo: invoice.nome || `Nº ${invoice.numero}`,
+      })
+      return reply.status(201).send(invoice)
+    },
+  )
+
+  scope.put(
+    '/invoices/:id',
+    {
+      schema: {
+        tags: ['Invoices'],
+        summary: 'Reescreve um invoice já emitido',
+        params: paramsId,
+        body: invoiceInputSchema,
+        response: {
+          200: invoiceSchema,
+          401: erroSchema,
+          403: erroSchema,
+          404: erroSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await exigirEscrita(scope, request, reply))) return
+      const invoice = await scope.services.painel.atualizarInvoice(
+        request.params.id,
+        request.body,
+      )
+      if (!invoice)
+        return reply.status(404).send({ error: 'Invoice não encontrado' })
+      return reply.status(200).send(invoice)
+    },
+  )
+
+  scope.delete(
+    '/invoices/:id',
+    {
+      schema: {
+        tags: ['Invoices'],
+        summary: 'Exclui um invoice',
+        params: paramsId,
+        response: {
+          200: okSchema,
+          401: erroSchema,
+          403: erroSchema,
+          404: erroSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await exigirEscrita(scope, request, reply))) return
+      const ok = await scope.services.painel.excluirInvoice(request.params.id)
+      if (!ok)
+        return reply.status(404).send({ error: 'Invoice não encontrado' })
+      return reply.status(200).send({ ok })
+    },
+  )
+
+  // ─── Acessos da equipe ────────────────────────────────────
+
+  scope.get(
+    '/acessos-equipe',
+    {
+      schema: {
+        tags: ['Equipe'],
+        summary: 'Entradas no painel, uma por login',
+        response: {
+          200: acessosEquipeSchema,
+          401: erroSchema,
+          403: erroSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      /* Só administrador vê: a lista mostra IP e navegador de todo mundo. */
+      if (!(await exigirGestaoDeEquipe(scope, request, reply))) return
+
+      const acessos = await scope.services.painel.listarAcessos()
+      return reply.status(200).send({ acessos })
+    },
+  )
+
   // ─── Equipe ───────────────────────────────────────────────
 
   scope.post(
@@ -454,7 +641,8 @@ export const painelRoute = tp(async (scope) => {
       },
     },
     async (request, reply) => {
-      if (!(await exigirGestaoDeEquipe(scope, request, reply))) return
+      const autor = await exigirGestaoDeEquipe(scope, request, reply)
+      if (!autor) return
 
       const { senha, ...ficha } = request.body
 
@@ -474,10 +662,18 @@ export const painelRoute = tp(async (scope) => {
         })
       }
 
+      await scope.services.painel.descartarSessoesDe(criado.user.id)
+
       const administrador = await scope.services.painel.criarAdministrador(
         ficha,
         criado.user.id,
       )
+      await scope.services.painel.registrarAtividade({
+        autorId: autor.id,
+        autorNome: autor.nome,
+        acao: 'pessoa_adicionada',
+        alvo: administrador.nome,
+      })
       return reply.status(201).send(administrador)
     },
   )
@@ -500,7 +696,8 @@ export const painelRoute = tp(async (scope) => {
       },
     },
     async (request, reply) => {
-      if (!(await exigirGestaoDeEquipe(scope, request, reply))) return
+      const autor = await exigirGestaoDeEquipe(scope, request, reply)
+      if (!autor) return
 
       const { senha, ...ficha } = request.body
       const atual = await scope.services.painel.buscarAdministrador(
@@ -532,6 +729,7 @@ export const painelRoute = tp(async (scope) => {
           })
         }
 
+        await scope.services.painel.descartarSessoesDe(criado.user.id)
         await scope.services.painel.vincularConta(atual.id, criado.user.id)
       }
 

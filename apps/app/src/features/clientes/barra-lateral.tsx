@@ -1,29 +1,57 @@
 import { cn } from '@repo/ui'
 import {
+  BookMarked,
+  BookText,
+  FileSignature,
+  Gift,
   GitBranch,
   KanbanSquare,
   LayoutDashboard,
   LogOut,
+  ReceiptText,
   Settings,
   StickyNote,
   Users,
 } from 'lucide-react'
 import { Fragment } from 'react'
 
-/* Menu em grupos, na ordem em que aparecem. Dashboard abre sozinho, sem
- * rótulo; "Operação" é o trabalho do dia; "Gestão" são os ajustes. */
+/* Menu em grupos, na ordem em que aparecem. "Visão geral" é o retrato do
+ * todo; "Operação" é o trabalho do dia; "Onboarding" é o material que o time
+ * envia ao cliente; "Gestão" são os ajustes. */
 export const GRUPOS = [
   {
-    rotulo: null,
-    itens: [{ id: 'dashboard', titulo: 'Dashboard', icone: LayoutDashboard }],
+    rotulo: 'Visão geral',
+    itens: [
+      { id: 'dashboard', titulo: 'Dashboard', icone: LayoutDashboard },
+      { id: 'pipeline', titulo: 'Pipeline', icone: KanbanSquare },
+    ],
   },
   {
     rotulo: 'Operação',
     itens: [
       { id: 'clientes', titulo: 'Clientes', icone: Users },
       { id: 'funis', titulo: 'Entregas', icone: GitBranch },
-      { id: 'pipeline', titulo: 'Pipeline', icone: KanbanSquare },
+      {
+        id: 'playbooks',
+        titulo: 'Playbooks',
+        icone: BookMarked,
+        selo: 'Em breve',
+      },
       { id: 'mural', titulo: 'Anotações', icone: StickyNote },
+    ],
+  },
+  {
+    rotulo: 'Onboarding',
+    itens: [
+      {
+        id: 'contrato',
+        titulo: 'Contrato',
+        icone: FileSignature,
+        selo: 'Em breve',
+      },
+      { id: 'invoices', titulo: 'Invoices', icone: ReceiptText },
+      { id: 'documentacao', titulo: 'Documentação', icone: BookText },
+      { id: 'indicacoes', titulo: 'Indique e ganhe', icone: Gift },
     ],
   },
   {
@@ -51,7 +79,7 @@ const CASAS = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 function GradeCarregando() {
   return (
     <span
-      className="grid size-4 shrink-0 grid-cols-3 gap-px"
+      className="grid size-4 shrink-0 grid-cols-3 gap-px text-sky-400"
       aria-hidden="true"
     >
       {CASAS.map((casa) => {
@@ -86,11 +114,14 @@ function BotaoMenu({
   titulo,
   icone: Icone,
   selecionado,
+  selo,
   onClick,
 }: {
   titulo: string
   icone: typeof LayoutDashboard
   selecionado: boolean
+  /** Etiqueta ao lado do nome, para itens que ainda não estão prontos. */
+  selo?: string
   onClick: () => void
 }) {
   return (
@@ -110,7 +141,13 @@ function BotaoMenu({
       ) : (
         <Icone className="size-4 shrink-0" />
       )}
-      {titulo}
+      <span className="min-w-0 flex-1 truncate">{titulo}</span>
+
+      {selo && (
+        <span className="shrink-0 rounded-md bg-white/6 px-1.5 py-0.5 font-inter font-medium text-[#8A8A8F] text-[10px]">
+          {selo}
+        </span>
+      )}
     </button>
   )
 }
@@ -121,13 +158,15 @@ export function BarraLateral({
   onSair,
 }: BarraLateralProps) {
   return (
-    <aside className="flex w-full shrink-0 flex-col border-white/8 border-b lg:h-screen lg:w-60 lg:border-r lg:border-b-0">
-      <div className="flex h-16 items-center px-5">
+    <aside className="flex w-full shrink-0 flex-col border-white/8 border-b lg:h-screen lg:w-60 lg:overflow-y-auto lg:border-r lg:border-b-0">
+      {/* 26px = os 12px do nav mais os 14px do botão: alinha a logo com o
+          ícone dos itens do menu. */}
+      <div className="flex h-16 items-center px-[26px]">
         <a href="/" className="flex items-center">
           <img
-            src="/images/logo-white.webp"
-            alt="Clickmax"
-            className="h-5 w-auto"
+            src="/images/cx-delivery.webp"
+            alt="CX Delivery"
+            className="h-7 w-auto"
           />
         </a>
       </div>
@@ -155,6 +194,7 @@ export function BarraLateral({
                     titulo={item.titulo}
                     icone={item.icone}
                     selecionado={item.id === ativo}
+                    selo={'selo' in item ? item.selo : undefined}
                     onClick={() => onSelecionar(item.id)}
                   />
                 </li>

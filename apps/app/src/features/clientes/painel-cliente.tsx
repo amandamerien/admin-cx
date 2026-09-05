@@ -2,6 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import * as Menu from '@radix-ui/react-dropdown-menu'
 import { cn } from '@repo/ui'
 import {
+  Asterisk,
   BadgeDollarSign,
   Check,
   ChevronDown,
@@ -21,6 +22,7 @@ import {
   Presentation,
   RectangleHorizontal,
   Table2,
+  Target,
   Trash2,
   Video,
   X,
@@ -51,6 +53,8 @@ import {
   type TipoArquivo,
 } from './dados'
 import { EstadoVazio } from './estado-vazio'
+import { FRENTES, type FrenteId } from './frentes-do-cliente'
+import { AnelProgresso } from './graficos'
 
 /* Ícone e cor de cada lugar onde o material costuma morar. Marca não tem
    ícone próprio no lucide: o que vale aqui é reconhecer o tipo de bate-pronto,
@@ -68,19 +72,15 @@ const ICONES_ARQUIVO: Record<
   canva: { icone: Palette, cor: 'text-cyan-300' },
   dropbox: { icone: Cloud, cor: 'text-blue-300' },
   loom: { icone: Video, cor: 'text-fuchsia-300' },
+  /* O asterisco lembra a marca do Claude; a cor é a dela. */
+  claude: { icone: Asterisk, cor: 'text-[#D97757]' },
   outro: { icone: Link2, cor: 'text-[#6F6F76]' },
 }
 
-/* As três frentes da ficha. Empilhadas, a ficha virava uma página longa de
- * rolar; em abas, vê-se uma de cada vez. */
-const ABAS_FICHA = [
-  { id: 'entregas', titulo: 'Entregas' },
-  { id: 'anotacoes', titulo: 'Anotações' },
-  { id: 'arquivos', titulo: 'Arquivos' },
-  { id: 'acessos', titulo: 'Acessos' },
-] as const
-
-type AbaFicha = (typeof ABAS_FICHA)[number]['id']
+/* As abas da ficha saem da mesma lista dos selos do cartão: mesmo ícone, mesmo
+ * nome, mesma ordem. Empilhadas, a ficha virava uma página longa de rolar; em
+ * abas, vê-se uma de cada vez. */
+type AbaFicha = FrenteId
 
 /* Como o painel abre, nos três formatos do peek do Notion. `centralizado` é o
    padrão: cabe a ficha inteira sem tapar a lista de trás por completo. */
@@ -568,6 +568,21 @@ export function PainelCliente({
                 </span>
               </Propriedade>
 
+              {/* Só aparece quando há meta combinada: sem número contratado
+                  não há progresso para medir. */}
+              {cliente.funisContratados > 0 && (
+                <Propriedade icone={Target} rotulo="Funis contratados">
+                  <AnelProgresso
+                    feito={
+                      funis.filter((funil) => funil.status === 'concluido')
+                        .length
+                    }
+                    total={cliente.funisContratados}
+                    className="text-[#F4F5F5]"
+                  />
+                </Propriedade>
+              )}
+
               <Propriedade icone={Mail} rotulo="E-mail">
                 <TextoEditavel
                   valor={cliente.email}
@@ -583,8 +598,9 @@ export function PainelCliente({
               aria-label="Seções da ficha do cliente"
               className="mt-8 flex gap-1 border-white/8 border-b"
             >
-              {ABAS_FICHA.map((opcao) => {
+              {FRENTES.map((opcao) => {
                 const selecionada = opcao.id === aba
+                const Icone = opcao.icone
 
                 return (
                   <button
@@ -594,12 +610,13 @@ export function PainelCliente({
                     aria-selected={selecionada}
                     onClick={() => setAba(opcao.id)}
                     className={cn(
-                      '-mb-px border-b-2 px-3 pb-2.5 font-inter font-medium text-sm transition-colors',
+                      '-mb-px flex items-center gap-1.5 border-b-2 px-3 pb-2.5 font-inter font-medium text-sm transition-colors',
                       selecionada
                         ? 'border-white text-white'
                         : 'border-transparent text-[#8A8A8F] hover:text-white',
                     )}
                   >
+                    <Icone className="size-3.5 shrink-0" />
                     {opcao.titulo}
                   </button>
                 )

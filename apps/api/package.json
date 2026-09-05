@@ -16,6 +16,7 @@
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.0.0",
     "@fastify/swagger": "^9.6.1",
+    "@fastify/websocket": "^11.3.0",
     "@repo/database": "workspace:*",
     "@scalar/fastify-api-reference": "^1.62.5",
     "better-auth": "^1.6.0",

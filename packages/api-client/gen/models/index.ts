@@ -4,7 +4,11 @@ export type { DeleteAnotacoesId200, DeleteAnotacoesId401, DeleteAnotacoesId403, 
 export type { DeleteArquivosId200, DeleteArquivosId401, DeleteArquivosId403, DeleteArquivosId404, DeleteArquivosIdMutation, DeleteArquivosIdMutationResponse, DeleteArquivosIdPathParams } from "./DeleteArquivosId.ts";
 export type { DeleteClientesId200, DeleteClientesId401, DeleteClientesId403, DeleteClientesId404, DeleteClientesIdMutation, DeleteClientesIdMutationResponse, DeleteClientesIdPathParams } from "./DeleteClientesId.ts";
 export type { DeleteFunisId200, DeleteFunisId401, DeleteFunisId403, DeleteFunisId404, DeleteFunisIdMutation, DeleteFunisIdMutationResponse, DeleteFunisIdPathParams } from "./DeleteFunisId.ts";
+export type { DeleteInvoicesId200, DeleteInvoicesId401, DeleteInvoicesId403, DeleteInvoicesId404, DeleteInvoicesIdMutation, DeleteInvoicesIdMutationResponse, DeleteInvoicesIdPathParams } from "./DeleteInvoicesId.ts";
 export type { DeleteNotasId200, DeleteNotasId401, DeleteNotasId403, DeleteNotasId404, DeleteNotasIdMutation, DeleteNotasIdMutationResponse, DeleteNotasIdPathParams } from "./DeleteNotasId.ts";
+export type { GetAcessosEquipe200, GetAcessosEquipe401, GetAcessosEquipe403, GetAcessosEquipeQuery, GetAcessosEquipeQueryResponse } from "./GetAcessosEquipe.ts";
+export type { GetAtividades200, GetAtividades401, GetAtividades403, GetAtividadesQuery, GetAtividadesQueryResponse } from "./GetAtividades.ts";
+export type { GetInvoices200, GetInvoices401, GetInvoices403, GetInvoicesQuery, GetInvoicesQueryResponse } from "./GetInvoices.ts";
 export type { GetMe200, GetMe401, GetMeQuery, GetMeQueryResponse } from "./GetMe.ts";
 export type { AdministradoresAvatarEnumKey, AdministradoresPapelEnumKey, AnotacoesCorEnumKey, AnotacoesTipoEnumKey, ArquivosTipoEnumKey, ChecklistsGrupoEnumKey, ClientesCicloPlanoEnumKey, ClientesPlanoEnumKey, ClientesStatusEnumKey, FunisEtapaEnumKey, FunisStatusEnumKey, GetPainel200, GetPainel401, GetPainel403, GetPainelQuery, GetPainelQueryResponse } from "./GetPainel.ts";
 export type { PatchAdministradoresId200, PatchAdministradoresId200AvatarEnumKey, PatchAdministradoresId200PapelEnumKey, PatchAdministradoresId400, PatchAdministradoresId401, PatchAdministradoresId403, PatchAdministradoresId404, PatchAdministradoresIdMutation, PatchAdministradoresIdMutationRequest, PatchAdministradoresIdMutationRequestAvatarEnumKey, PatchAdministradoresIdMutationRequestPapelEnumKey, PatchAdministradoresIdMutationResponse, PatchAdministradoresIdPathParams } from "./PatchAdministradoresId.ts";
@@ -18,7 +22,9 @@ export type { PostAnotacoes201, PostAnotacoes201CorEnumKey, PostAnotacoes201Tipo
 export type { PostArquivos201, PostArquivos201TipoEnumKey, PostArquivos401, PostArquivos403, PostArquivosMutation, PostArquivosMutationRequest, PostArquivosMutationRequestTipoEnumKey, PostArquivosMutationResponse } from "./PostArquivos.ts";
 export type { PostClientes201, PostClientes201CicloPlanoEnumKey, PostClientes201PlanoEnumKey, PostClientes201StatusEnumKey, PostClientes401, PostClientes403, PostClientesMutation, PostClientesMutationRequest, PostClientesMutationRequestCicloPlanoEnumKey, PostClientesMutationRequestPlanoEnumKey, PostClientesMutationRequestStatusEnumKey, PostClientesMutationResponse } from "./PostClientes.ts";
 export type { PostFunis201, PostFunis201EtapaEnumKey, PostFunis201StatusEnumKey, PostFunis401, PostFunis403, PostFunisMutation, PostFunisMutationRequest, PostFunisMutationRequestEtapaEnumKey, PostFunisMutationRequestStatusEnumKey, PostFunisMutationResponse } from "./PostFunis.ts";
+export type { PostInvoices201, PostInvoices401, PostInvoices403, PostInvoicesMutation, PostInvoicesMutationRequest, PostInvoicesMutationResponse } from "./PostInvoices.ts";
 export type { PostNotas201, PostNotas401, PostNotas403, PostNotasMutation, PostNotasMutationRequest, PostNotasMutationResponse } from "./PostNotas.ts";
+export type { PutInvoicesId200, PutInvoicesId401, PutInvoicesId403, PutInvoicesId404, PutInvoicesIdMutation, PutInvoicesIdMutationRequest, PutInvoicesIdMutationResponse, PutInvoicesIdPathParams } from "./PutInvoicesId.ts";
 export { administradoresAvatarEnum } from "./GetPainel.ts";
 export { administradoresPapelEnum } from "./GetPainel.ts";
 export { anotacoesCorEnum } from "./GetPainel.ts";

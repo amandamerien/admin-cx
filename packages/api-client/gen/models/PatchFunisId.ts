@@ -62,9 +62,9 @@ export type PatchFunisId200 = {
     */
     status: PatchFunisId200StatusEnumKey;
     /**
-     * @type string
+     * @type array
     */
-    responsavel: string;
+    responsaveis: string[];
     dataEntrega: (string | null);
 };
 
@@ -142,9 +142,9 @@ export type PatchFunisIdMutationRequest = {
     */
     status?: PatchFunisIdMutationRequestStatusEnumKey;
     /**
-     * @type string | undefined
+     * @type array | undefined
     */
-    responsavel?: string;
+    responsaveis?: string[];
     dataEntrega?: (string | null);
 };
 

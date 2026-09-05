@@ -135,7 +135,7 @@ export type PostAdministradoresMutationRequest = {
     */
     avatar: PostAdministradoresMutationRequestAvatarEnumKey;
     /**
-     * @minLength 8
+     * @minLength 6
      * @type string
     */
     senha: string;

@@ -5,3 +5,32 @@ body,
 #root {
   height: 100%;
 }
+
+/* Impressão.
+ *
+ * A janela do painel é travada em altura (h-screen + overflow-hidden) para o
+ * menu ficar parado. No papel isso cortaria tudo na primeira página, então
+ * aqui a altura volta a ser livre. O menu sai junto: o que vai impresso é só
+ * o documento.
+ *
+ * Os seletores passam por `#root` de propósito — assim vencem as utilitárias
+ * do Tailwind por especificidade, sem precisar de `!important`. */
+@media print {
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  #root,
+  #root > div,
+  #root main {
+    height: auto;
+    overflow: visible;
+  }
+
+  #root aside {
+    display: none;
+  }
+}

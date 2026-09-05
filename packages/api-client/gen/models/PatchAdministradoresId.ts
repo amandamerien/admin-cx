@@ -149,7 +149,7 @@ export type PatchAdministradoresIdMutationRequest = {
     */
     avatar?: PatchAdministradoresIdMutationRequestAvatarEnumKey;
     /**
-     * @minLength 8
+     * @minLength 6
      * @type string | undefined
     */
     senha?: string;

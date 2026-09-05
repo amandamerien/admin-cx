@@ -1,5 +1,5 @@
-import { Plus } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronDown, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { usePainel } from './api'
 import { Baloes } from './baloes'
 import { BarraLateral, type SecaoMenu } from './barra-lateral'
@@ -16,22 +16,30 @@ import {
   type ColunaPipeline,
   type Funil,
   type ItemChecklist,
+  mesesDoFiltro,
   notasDoCliente,
+  PERMISSOES,
   type StatusFunil,
   type TipoAnotacao,
 } from './dados'
+import { EstadoVazio } from './estado-vazio'
 import { FormularioAdministrador } from './formulario-administrador'
 import { FormularioCliente } from './formulario-cliente'
 import { FormularioFunil } from './formulario-funil'
 import { PainelCliente } from './painel-cliente'
+import { CursoresPresentes } from './presenca'
+import { SecaoAcessosEquipe } from './secao-acessos-equipe'
 import { SecaoAdministradores } from './secao-administradores'
 import { SecaoChecklist } from './secao-checklist'
 import { SecaoClientes } from './secao-clientes'
 import { type AbaConfiguracoes, AbasConfiguracoes } from './secao-configuracoes'
 import { SecaoDashboard } from './secao-dashboard'
 import { SecaoFunis } from './secao-funis'
+import { SecaoIndicacoes } from './secao-indicacoes'
+import { SecaoInvoices } from './secao-invoices'
 import { SecaoMural } from './secao-mural'
 import { SecaoPipeline } from './secao-pipeline'
+import { SinoAtividades } from './sino-atividades'
 import { useSair, useUsuarioLogado } from './usuario-logado'
 
 /* Título, descrição e ação de cada seção do menu. `acao` ausente = a seção
@@ -44,7 +52,7 @@ const CABECALHO: Record<
   pipeline: {
     titulo: 'Pipeline',
     descricao:
-      'As entregas cadastradas, coluna a coluna. Para criar um card, cadastre a entrega em Entregas.',
+      'As entregas cadastradas, agrupadas por status. Para criar um card, cadastre a entrega em Entregas.',
   },
   mural: {
     titulo: 'Anotações',
@@ -55,19 +63,46 @@ const CABECALHO: Record<
     descricao: 'As entregas em construção, com a etapa e o status de cada uma.',
     acao: 'Adicionar entrega',
   },
+  playbooks: {
+    titulo: 'Playbooks',
+    descricao: 'Os roteiros que o time segue em cada frente do trabalho.',
+  },
   clientes: {
     titulo: 'Clientes',
     descricao:
       'Clientes em processo de construção de funil com o time Clickmax.',
     acao: 'Adicionar cliente',
   },
+  documentacao: {
+    titulo: 'Documentação',
+    descricao: 'O checklist de onboarding que o time envia aos clientes.',
+  },
+  invoices: {
+    titulo: 'Invoices',
+    descricao:
+      'Os invoices emitidos. Abra um para corrigir e exportar de novo.',
+    acao: 'Novo invoice',
+  },
+  contrato: {
+    titulo: 'Contrato',
+    descricao: 'Os modelos de contrato que o time envia ao cliente.',
+  },
+  indicacoes: {
+    titulo: 'Indique e ganhe',
+    descricao:
+      'O programa de indicação do Clickmax, para apresentar ao cliente na conversa.',
+  },
   configuracoes: {
     titulo: 'Configurações',
-    descricao: 'A equipe e o checklist que o time envia aos clientes.',
+    descricao: 'A equipe e quem entrou no painel.',
   },
 }
 
 /* /clientes — menu lateral e as seções da área de clientes. */
+/* Os doze meses do filtro, calculados uma vez: eles não mudam enquanto a
+ * pessoa está com a tela aberta. */
+const MESES_DO_FILTRO = mesesDoFiltro()
+
 export function ClientesPage() {
   /* Os dados do painel vêm do servidor (GET /painel) e cada alteração é uma
      chamada à API — nada mais mora só na memória do navegador. */
@@ -103,9 +138,52 @@ export function ClientesPage() {
   const [disparoBaloes, setDisparoBaloes] = useState(0)
   const [formularioAdmin, setFormularioAdmin] = useState(false)
   const [adminEmEdicao, setAdminEmEdicao] = useState<Administrador | null>(null)
+  /* Qual invoice está aberto no editor. Mora aqui para o botão do cabeçalho
+     conseguir abrir um novo, como nas outras seções. */
+  const [invoiceAberto, setInvoiceAberto] = useState<string | null>(null)
+  /* Vazio = todos os meses. O filtro é do Dashboard e recorta as entregas
+     pela data prevista. */
+  const [mesDoDashboard, setMesDoDashboard] = useState('')
 
   const clienteAberto =
     clientes.find((cliente) => cliente.id === clienteAbertoId) ?? null
+
+  /* Quanto cada cliente tem de cada frente, para os selos do cartão. Uma
+     passada por lista em vez de um filtro por cliente dentro do render. */
+  const contagensPorCliente = useMemo(() => {
+    const vazio = () => ({
+      entregas: 0,
+      anotacoes: 0,
+      arquivos: 0,
+      acessos: 0,
+      /* Fora das frentes: alimenta o anel de progresso do cartão. */
+      concluidas: 0,
+    })
+    const mapa: Record<string, ReturnType<typeof vazio>> = {}
+    for (const cliente of clientes) mapa[cliente.id] = vazio()
+
+    for (const funil of funis) {
+      const alvo = mapa[funil.clienteId]
+      if (!alvo) continue
+
+      alvo.entregas += 1
+      if (funil.status === 'concluido') alvo.concluidas += 1
+    }
+    for (const nota of notas) {
+      const alvo = mapa[nota.clienteId]
+      if (alvo) alvo.anotacoes += 1
+    }
+    for (const arquivo of arquivos) {
+      const alvo = mapa[arquivo.clienteId]
+      if (alvo) alvo.arquivos += 1
+    }
+    for (const acesso of acessos) {
+      const alvo = mapa[acesso.clienteId]
+      if (alvo) alvo.acessos += 1
+    }
+
+    return mapa
+  }, [clientes, funis, notas, arquivos, acessos])
   const cabecalho = CABECALHO[secao]
 
   function abrirNovoCliente() {
@@ -277,9 +355,13 @@ export function ClientesPage() {
 
       if (ficha.nome !== adminEmEdicao.nome) {
         for (const funil of funis) {
-          if (funil.responsavel === adminEmEdicao.nome) {
-            painel.atualizarFunil(funil.id, { responsavel: ficha.nome })
-          }
+          if (!funil.responsaveis.includes(adminEmEdicao.nome)) continue
+
+          painel.atualizarFunil(funil.id, {
+            responsaveis: funil.responsaveis.map((nome) =>
+              nome === adminEmEdicao.nome ? ficha.nome : nome,
+            ),
+          })
         }
       }
 
@@ -299,6 +381,7 @@ export function ClientesPage() {
   function abrirCadastro() {
     if (secao === 'clientes') abrirNovoCliente()
     else if (secao === 'configuracoes') abrirNovoAdmin()
+    else if (secao === 'invoices') setInvoiceAberto('')
     else abrirNovoFunil()
   }
 
@@ -311,17 +394,40 @@ export function ClientesPage() {
         : undefined
       : CABECALHO[secao].acao
 
-  const podeCadastrar = secao !== 'funis' || clientes.length > 0
+  /* O que este papel pode fazer. O servidor recusa de todo jeito; aqui o
+     ponto é não oferecer botão que vai dar erro na cara da pessoa. */
+  const permissoes = PERMISSOES[usuarioLogado?.papel ?? 'visualizador']
+
+  /* Sem cliente não há a quem vincular uma entrega; no editor de invoice o
+     botão de "novo" sairia do lugar, então some enquanto ele está aberto. */
+  const temOndeCadastrar =
+    secao === 'invoices'
+      ? invoiceAberto === null
+      : secao !== 'funis' || clientes.length > 0
+
+  const podeCadastrarNaSecao =
+    secao === 'clientes'
+      ? permissoes.adicionarCliente
+      : secao === 'configuracoes'
+        ? permissoes.gerenciarEquipe
+        : secao === 'funis' || secao === 'invoices'
+          ? permissoes.adicionarFunil
+          : true
+
+  const podeCadastrar = temOndeCadastrar && podeCadastrarNaSecao
 
   /* A sessão ainda está sendo lida (ou acabou de cair): o guard da rota leva
      para o login, aqui só evitamos piscar a tela sem usuário. */
   if (!usuarioLogado) return null
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-[#131316] lg:flex-row">
+    /* No desktop a janela não rola: o menu fica parado e quem rola é o
+       conteúdo. No mobile o menu vira uma faixa no topo, então a página volta
+       a rolar inteira — prender ali só esconderia o menu atrás do conteúdo. */
+    <div className="flex min-h-screen w-full flex-col bg-[#131316] lg:h-screen lg:min-h-0 lg:flex-row lg:overflow-hidden">
       <BarraLateral ativo={secao} onSelecionar={setSecao} onSair={sair} />
 
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 lg:h-screen lg:overflow-y-auto">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8 sm:py-10">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -334,6 +440,33 @@ export function ClientesPage() {
                 </p>
               )}
             </div>
+
+            {/* Recorte do Dashboard, no canto direito do cabeçalho, onde
+                mora a ação das outras seções.
+                A seta é desenhada aqui: a nativa do select cola na borda e
+                não aceita margem. */}
+            {secao === 'dashboard' && (
+              <div className="relative w-fit shrink-0">
+                <select
+                  value={mesDoDashboard}
+                  onChange={(evento) => setMesDoDashboard(evento.target.value)}
+                  aria-label="Filtrar por mês"
+                  className="h-9 appearance-none rounded-lg border border-white/8 bg-white/2 pr-9 pl-3 font-inter text-[#ABABAB] text-xs outline-none focus-visible:border-white/25"
+                >
+                  <option value="">Todos os meses</option>
+                  {MESES_DO_FILTRO.map((mes) => (
+                    <option key={mes.valor} value={mes.valor}>
+                      {mes.rotulo}
+                    </option>
+                  ))}
+                </select>
+
+                <ChevronDown
+                  aria-hidden
+                  className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-3 size-3.5 text-[#6F6F76]"
+                />
+              </div>
+            )}
 
             {acaoDoCabecalho && podeCadastrar && (
               <button
@@ -364,6 +497,7 @@ export function ClientesPage() {
               clientes={clientes}
               administradores={administradores}
               onMover={moverFunilNaPipeline}
+              onAlterarStatus={alterarStatusFunil}
             />
           )}
 
@@ -372,6 +506,7 @@ export function ClientesPage() {
               clientes={clientes}
               funis={funis}
               administradores={administradores}
+              mes={mesDoDashboard}
             />
           )}
 
@@ -379,27 +514,61 @@ export function ClientesPage() {
             <>
               <AbasConfiguracoes
                 ativa={abaConfig}
+                podeVerAcessos={permissoes.gerenciarEquipe}
                 onSelecionar={setAbaConfig}
               />
 
-              {abaConfig === 'administradores' ? (
+              {abaConfig === 'administradores' && (
                 <SecaoAdministradores
                   administradores={administradores}
+                  podeGerenciar={permissoes.gerenciarEquipe}
                   onAdicionar={abrirNovoAdmin}
                   onEditar={abrirEdicaoAdmin}
                   onExcluir={excluirAdmin}
                 />
-              ) : (
-                <SecaoChecklist
-                  clientes={clientes}
-                  itens={checklists}
-                  onAlternarRecebido={(item) =>
-                    atualizarItem(item, { recebido: !item.recebido })
-                  }
-                  onDefinirLink={(item, link) => atualizarItem(item, { link })}
-                />
+              )}
+
+              {abaConfig === 'acessos' && (
+                <SecaoAcessosEquipe administradores={administradores} />
               )}
             </>
+          )}
+
+          {secao === 'invoices' && (
+            <SecaoInvoices
+              abertoId={invoiceAberto}
+              onAbrir={setInvoiceAberto}
+            />
+          )}
+
+          {secao === 'indicacoes' && <SecaoIndicacoes />}
+
+          {secao === 'playbooks' && (
+            <EstadoVazio
+              id="playbooks"
+              desenho="documentos"
+              titulo="Em breve"
+              descricao="Aqui vão ficar os roteiros do time. Ainda não há nada para mostrar."
+            />
+          )}
+
+          {secao === 'contrato' && (
+            <EstadoVazio
+              id="contrato"
+              titulo="Em breve"
+              descricao="Aqui vão ficar os modelos de contrato do time. Ainda não há nada para mostrar."
+            />
+          )}
+
+          {secao === 'documentacao' && (
+            <SecaoChecklist
+              clientes={clientes}
+              itens={checklists}
+              onAlternarRecebido={(item) =>
+                atualizarItem(item, { recebido: !item.recebido })
+              }
+              onDefinirLink={(item, link) => atualizarItem(item, { link })}
+            />
           )}
 
           {secao === 'funis' && (
@@ -407,6 +576,7 @@ export function ClientesPage() {
               clientes={clientes}
               funis={funis}
               administradores={administradores}
+              podeEditar={permissoes.adicionarFunil}
               onAdicionarFunil={abrirNovoFunil}
               onEditarFunil={abrirEdicaoFunil}
               onExcluirFunil={excluirFunil}
@@ -417,6 +587,8 @@ export function ClientesPage() {
           {secao === 'clientes' && (
             <SecaoClientes
               clientes={clientes}
+              contagens={contagensPorCliente}
+              podeEditar={permissoes.editarCliente}
               onAdicionar={abrirNovoCliente}
               onAbrir={(cliente) => setClienteAbertoId(cliente.id)}
               onEditar={abrirEdicao}
@@ -425,6 +597,10 @@ export function ClientesPage() {
           )}
         </div>
       </main>
+
+      <SinoAtividades administradores={administradores} />
+
+      <CursoresPresentes secao={secao} />
 
       <Confete disparo={disparoConfete} />
       <Baloes disparo={disparoBaloes} />

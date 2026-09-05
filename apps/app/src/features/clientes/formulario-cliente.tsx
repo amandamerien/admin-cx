@@ -23,6 +23,9 @@ const schema = z.object({
      opção, editar um cliente antigo para trocar só o e-mail atribuiria um
      plano a ele sem ninguém escolher. */
   plano: z.enum(PLANOS_CLIENTE).or(z.literal('')),
+  /* Texto no formulário, número ao salvar: campo numérico devolve string, e
+     vazio precisa virar zero em vez de NaN. */
+  funisContratados: z.string(),
   cicloPlano: z.enum(CICLOS_PLANO).or(z.literal('')),
 })
 
@@ -33,6 +36,7 @@ const VALORES_PADRAO: NovoClienteInput = {
   nome: '',
   email: '',
   status: 'onboarding',
+  funisContratados: '',
   plano: '',
   cicloPlano: '',
 }
@@ -106,6 +110,9 @@ export function FormularioCliente({
             nome: cliente.nome,
             email: cliente.email,
             status: cliente.status,
+            funisContratados: cliente.funisContratados
+              ? String(cliente.funisContratados)
+              : '',
             plano: cliente.plano ?? '',
             cicloPlano: cliente.cicloPlano ?? '',
           }
@@ -116,6 +123,7 @@ export function FormularioCliente({
   function aoEnviar(dados: NovoCliente) {
     onSalvar({
       ...dados,
+      funisContratados: Number.parseInt(dados.funisContratados, 10) || 0,
       plano: dados.plano === '' ? null : dados.plano,
       cicloPlano: dados.cicloPlano === '' ? null : dados.cicloPlano,
     })
@@ -172,6 +180,22 @@ export function FormularioCliente({
                 placeholder="contato@empresa.com.br"
                 className={classeCampo}
                 {...register('email')}
+              />
+            </Campo>
+
+            <Campo
+              id="funisContratados"
+              rotulo="Funis contratados"
+              erro={errors.funisContratados?.message}
+            >
+              <input
+                id="funisContratados"
+                type="number"
+                min="0"
+                inputMode="numeric"
+                placeholder="0"
+                className={classeCampo}
+                {...register('funisContratados')}
               />
             </Campo>
 
